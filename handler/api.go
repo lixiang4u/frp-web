@@ -14,6 +14,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 func ApiServerConfig(ctx *gin.Context) {
@@ -110,6 +113,22 @@ func ApiFrpReload(ctx *gin.Context) {
 	}()
 
 	ctx.JSON(http.StatusOK, resp)
+}
+
+func ApiNotRoute(ctx *gin.Context) {
+	root, _ := filepath.Abs(filepath.Join("."))
+	tmpFile, _ := filepath.Abs(filepath.Join(".", ctx.Request.RequestURI))
+	_, err := os.Stat(tmpFile)
+	if err == nil && strings.HasPrefix(tmpFile, root) {
+		ctx.File(tmpFile)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"code": 404,
+		"msg":  "请求地址错误",
+		"uri":  ctx.Request.RequestURI,
+	})
 }
 
 func handlerVhostConfig(vhosts []model.Vhost) []v1.ProxyConfigurer {

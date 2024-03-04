@@ -159,7 +159,7 @@ const createVhostColumns = () => {
         const tmpUrl = `${row.type}://${row.custom_domain}`
         return [
           h('div', {class: 'lh150'}, h('a', {href: tmpUrl, target: '_blank'}, tmpUrl)),
-          h('div', {class: 'lh150'}, h('a', {href: `${tmpUrl}/files/`, target: '_blank'}, `${tmpUrl}/files/`)),
+          // h('div', {class: 'lh150'}, h('a', {href: `${tmpUrl}/files/`, target: '_blank'}, `${tmpUrl}/files/`)),
         ]
       },
     },
@@ -171,7 +171,7 @@ const createVhostColumns = () => {
         const tmpUrl = `${row.type}://${row.local_addr}`
         return [
           h('div', {class: 'lh150'}, h('a', {href: tmpUrl, target: '_blank'}, tmpUrl)),
-          h('div', {class: 'lh150'}, h('a', {href: `${tmpUrl}/files/`, target: '_blank'}, `${tmpUrl}/files/`)),
+          // h('div', {class: 'lh150'}, h('a', {href: `${tmpUrl}/files/`, target: '_blank'}, `${tmpUrl}/files/`)),
         ]
       },
     },

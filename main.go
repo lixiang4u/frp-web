@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"embed"
 	"fmt"
 	"github.com/fatedier/frp/client"
 	"github.com/fatedier/frp/pkg/config"
@@ -14,7 +13,6 @@ import (
 	"github.com/spf13/viper"
 	"io/fs"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -24,9 +22,6 @@ import (
 	"syscall"
 	"time"
 )
-
-//go:embed frp-web-h5/dist
-var content embed.FS
 
 var (
 	cfgFilePath = fakeEmptyConfig()
@@ -81,7 +76,8 @@ func httpServer(port int) {
 	//	ctx.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/%s", frpWebRoot))
 	//})
 	//r.Static("/file/", filepath.Join("."))
-	r.StaticFS("/files/", http.Dir("."))
+	//r.StaticFS("/files/", http.Dir("."))
+	r.NoRoute(handler.ApiNotRoute)
 
 	go func() { _ = r.Run(fmt.Sprintf(":%d", port)) }()
 	go openBrowser()
