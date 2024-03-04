@@ -372,7 +372,7 @@ const getVhostList = () => {
 const newVhost = () => {
   //newVhost
   api.newVhost({}).then(resp => {
-    console.log('[resp]', resp)
+    console.log('[newVhost-resp]', resp)
   }).catch(err => {
     modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
   })
@@ -383,7 +383,7 @@ const loadVhostOrCreate = () => {
     type: '',
     machine_id: 'machine_id',
   }).then(resp => {
-    console.log('[resp]', resp)
+    console.log('[newVhost-resp]', resp)
   }).catch(err => {
     modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
   })

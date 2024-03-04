@@ -91,8 +91,6 @@ func ApiFrpReload(ctx *gin.Context) {
 		return
 	}
 
-	log.Println("[resp]", utils.ToJsonString(resp))
-
 	//
 
 	go func() {
@@ -213,7 +211,6 @@ func ClientVhostList() error {
 		msg, _ := resp["msg"]
 		return errors.New(msg.(string))
 	}
-	log.Println("[resp]", utils.ToJsonString(resp))
 
 	return nil
 
