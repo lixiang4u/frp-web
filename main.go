@@ -75,7 +75,7 @@ func httpServer(port int) {
 	r.POST("/api/vhost", handler.ApiServerCreateVhost)
 	r.GET("/api/vhosts", handler.ApiServerVhostList)
 	r.DELETE("/api/vhost/:vhost_id", handler.ApiServerRemoveVhost)
-	r.DELETE("/api/frp/reload", handler.ApiFrpReload)
+	r.POST("/api/frp/reload", handler.ApiFrpReload)
 
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/%s", frpWebRoot))

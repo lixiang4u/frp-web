@@ -47,7 +47,7 @@
     <n-divider title-placement="left"><h2>3、启动/重载</h2></n-divider>
     <div class="plr40">
       <n-space class="btn-left">
-        <n-button type="primary" @click="showModalCreateVhost=true">启动/重载</n-button>
+        <n-button type="primary" :disabled="vhosts.length===0" @click="onClickReloadVhost">启动/重载</n-button>
       </n-space>
     </div>
 
@@ -395,6 +395,17 @@ const onClickShowCreateOrUpdateVhost = () => {
   showModalCreateVhost.value = true
 }
 
+const onClickReloadVhost = () => {
+  modalWaitingRef.value.showModal()
+  api.reloadVhost().then(resp => {
+    console.log('[reloadVhost-resp]', resp)
+  }).catch(err => {
+    modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
+  }).finally(() => {
+    modalWaitingRef.value.closeModal()
+  })
+}
+
 export default defineComponent({
   components: {
     ModalTipsComponent,
@@ -419,6 +430,7 @@ export default defineComponent({
       formServerConfigDisabled,
       showModalCreateVhost,
       onClickShowCreateOrUpdateVhost,
+      onClickReloadVhost,
       onClickVhostSave,
       formProxyConfigValue,
       modalTipsRef,

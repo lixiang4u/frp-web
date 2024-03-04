@@ -21,5 +21,10 @@ export default {
             `/api/vhost/${vhostId}`
         )
     },
+    reloadVhost: () => {
+        return request.post(
+            `/api/frp/reload`
+        )
+    },
 
 }

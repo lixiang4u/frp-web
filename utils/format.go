@@ -1,6 +1,9 @@
 package utils
 
-import "github.com/go-jose/go-jose/v3/json"
+import (
+	"github.com/go-jose/go-jose/v3/json"
+	"strconv"
+)
 
 func ToJsonString(v any) string {
 	buff, _ := json.MarshalIndent(v, "", "\t")
@@ -9,4 +12,9 @@ func ToJsonString(v any) string {
 
 func StringToBytes(str string) []byte {
 	return []byte(str)
+}
+
+func StringToInt(str string) int {
+	i, _ := strconv.Atoi(str)
+	return i
 }

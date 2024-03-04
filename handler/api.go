@@ -1,14 +1,17 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/fatedier/frp/client"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/gin-gonic/gin"
 	"github.com/go-jose/go-jose/v3/json"
 	"github.com/lixiang4u/frp-web/model"
 	"github.com/lixiang4u/frp-web/utils"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 )
@@ -68,7 +71,97 @@ func ApiServerRemoveVhost(ctx *gin.Context) {
 }
 
 func ApiFrpReload(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, gin.H{"ok": "ok"})
+	var params = url.Values{}
+	params.Add("machine_id", model.AppMachineId)
+
+	code, buf, _ := utils.HttpGet(fmt.Sprintf("%s/api/vhosts", model.ApiServerHost), params)
+
+	type Resp struct {
+		Code   int           `json:"code"`
+		Vhosts []model.Vhost `json:"vhosts"`
+	}
+	var resp Resp
+	_ = json.Unmarshal(buf, &resp)
+	if code != http.StatusOK {
+		ctx.JSON(code, resp)
+		return
+	}
+	if resp.Code != http.StatusOK {
+		ctx.JSON(resp.Code, resp)
+		return
+	}
+
+	log.Println("[resp]", utils.ToJsonString(resp))
+
+	//
+
+	go func() {
+		if err := runFrpClient(resp.Vhosts); err != nil {
+			log.Println("[frpClientError]", err.Error())
+		}
+	}()
+
+	ctx.JSON(http.StatusOK, resp)
+}
+
+func handlerVhostConfig(vhosts []model.Vhost) []v1.ProxyConfigurer {
+	var proxyCfgs = make([]v1.ProxyConfigurer, 0)
+	for _, vhost := range vhosts {
+		pc := v1.NewProxyConfigurerByType(v1.ProxyType(vhost.Type))
+		proxyCfgs = append(proxyCfgs, handlerVhostConfigTyped(pc, vhost))
+	}
+	return proxyCfgs
+}
+
+func handlerVhostConfigTyped(pc v1.ProxyConfigurer, vhost model.Vhost) (proxyCfg v1.ProxyConfigurer) {
+	host, port, _ := net.SplitHostPort(vhost.LocalAddr)
+	switch tmpC := pc.(type) {
+	case *v1.HTTPProxyConfig:
+		//tmpC.Type = ""
+		tmpC.Name = vhost.Name
+		tmpC.Transport.BandwidthLimitMode = "client"
+
+		tmpC.LocalIP = host
+		tmpC.LocalPort = utils.StringToInt(port)
+
+		tmpC.CustomDomains = make([]string, 0)
+		tmpC.CustomDomains = append(tmpC.CustomDomains, vhost.CustomDomain)
+
+		log.Println("[HTTPProxyConfig.vhost]", utils.ToJsonString(vhost))
+		log.Println("[tmpC.HTTPProxyConfig]", utils.ToJsonString(tmpC))
+		proxyCfg = tmpC
+	case *v1.HTTPSProxyConfig:
+		log.Println("[HTTPSProxyConfig.vhost]", utils.ToJsonString(vhost))
+		log.Println("[tmpC.HTTPSProxyConfig]", utils.ToJsonString(tmpC))
+		proxyCfg = tmpC
+	default:
+
+	}
+	return proxyCfg
+}
+
+func runFrpClient(vhosts []model.Vhost) error {
+	var cfg = &v1.ClientCommonConfig{}
+	cfg.Complete()
+	var proxyCfgs = handlerVhostConfig(vhosts)
+	var visitorCfgs = make([]v1.VisitorConfigurer, 0)
+	svr, err := client.NewService(client.ServiceOptions{
+		Common:         cfg,
+		ProxyCfgs:      proxyCfgs,
+		VisitorCfgs:    visitorCfgs,
+		ConfigFilePath: "",
+	})
+	if err != nil {
+		return err
+	}
+
+	shouldGracefulClose := cfg.Transport.Protocol == "kcp" || cfg.Transport.Protocol == "quic"
+	// Capture the exit signal if we use kcp or quic.
+	if shouldGracefulClose {
+		go utils.FrpTermSignal(svr)
+	}
+
+	return svr.Run(context.Background())
 }
 
 func NewClientVhost(localPort int) error {
