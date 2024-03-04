@@ -8,7 +8,9 @@ import (
 	"github.com/go-jose/go-jose/v3/json"
 	"github.com/lixiang4u/frp-web/model"
 	"github.com/lixiang4u/frp-web/utils"
+	"log"
 	"net/http"
+	"net/url"
 )
 
 func ApiServerConfig(ctx *gin.Context) {
@@ -20,12 +22,12 @@ func ApiServerConfig(ctx *gin.Context) {
 	ctx.JSON(code, resp)
 }
 
-func NewClientVhost() error {
+func NewClientVhost(localPort int) error {
 	var body = utils.ToJsonString(gin.H{
 		"type":       string(v1.ProxyTypeHTTP),
 		"machine_id": model.AppMachineId,
-		"local_addr": "type",
-		"name":       "type",
+		"local_addr": fmt.Sprintf("127.0.0.1:%d", localPort),
+		"name":       fmt.Sprintf("frp-%s(%d)", model.AppMachineId[:6], localPort),
 	})
 	code, buf, err := utils.HttpPost(fmt.Sprintf("%s/api/vhost", model.ApiServerHost), []byte(body))
 	if err != nil {
@@ -40,7 +42,7 @@ func NewClientVhost() error {
 	if err != nil {
 		return err
 	}
-	if v, ok := resp["code"]; !ok || v.(int) != http.StatusOK {
+	if v, ok := resp["code"]; !ok || int(v.(float64)) != http.StatusOK {
 		msg, _ := resp["msg"]
 		return errors.New(msg.(string))
 	}
@@ -49,7 +51,10 @@ func NewClientVhost() error {
 }
 
 func ClientVhostList() error {
-	code, buf, err := utils.HttpGet(fmt.Sprintf("%s/api/vhosts", model.ApiServerHost))
+	var params = url.Values{}
+	params.Add("machine_id", model.AppMachineId)
+
+	code, buf, err := utils.HttpGet(fmt.Sprintf("%s/api/vhosts", model.ApiServerHost), params)
 	if err != nil {
 		return err
 	}
@@ -62,10 +67,11 @@ func ClientVhostList() error {
 	if err != nil {
 		return err
 	}
-	if v, ok := resp["code"]; !ok || v.(int) != http.StatusOK {
+	if v, ok := resp["code"]; !ok || int(v.(float64)) != http.StatusOK {
 		msg, _ := resp["msg"]
 		return errors.New(msg.(string))
 	}
+	log.Println("[resp]", utils.ToJsonString(resp))
 
 	return nil
 

@@ -2,9 +2,11 @@ package utils
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 )
 
 func HttpPost(requestUrl string, requestBody []byte) (int, []byte, error) {
@@ -24,13 +26,17 @@ func HttpPost(requestUrl string, requestBody []byte) (int, []byte, error) {
 	return resp.StatusCode, buf, nil
 }
 
-func HttpGet(requestUrl string) (int, []byte, error) {
+func HttpGet(requestUrl string, params ...url.Values) (int, []byte, error) {
+	if len(params) != 0 {
+		requestUrl = fmt.Sprintf("%s?%s", requestUrl, params[0].Encode())
+	}
 	log.Println("[requestUrl]", requestUrl)
 	resp, err := http.Get(requestUrl)
 	if err != nil {
 		log.Println("[postError]", err.Error())
 		return http.StatusInternalServerError, nil, err
 	}
+
 	defer func() { _ = resp.Body.Close() }()
 
 	buf, err := io.ReadAll(resp.Body)

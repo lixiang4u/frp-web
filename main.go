@@ -22,12 +22,13 @@ import (
 
 var (
 	cfgFilePath = fakeEmptyConfig()
+	port        = utils.IWantUseHttpPort()
 )
 
 func main() {
-	go getVhostListOrCreate()
+	go getVhostListOrCreate(port)
 
-	httpServer()
+	httpServer(port)
 
 }
 
@@ -42,7 +43,7 @@ func fakeEmptyConfig() string {
 	return yamlFile
 }
 
-func httpServer() {
+func httpServer(port int) {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGKILL)
 
@@ -63,8 +64,6 @@ func httpServer() {
 	r.Static("/static", utils.AppPath())
 
 	r.GET("/api/config", handler.ApiServerConfig)
-
-	port := utils.IWantUseHttpPort()
 
 	go func() {
 		_ = r.Run(fmt.Sprintf(":%d", port))
@@ -165,9 +164,13 @@ func handleTermSignal(svr *client.Service) {
 	svr.GracefulClose(500 * time.Millisecond)
 }
 
-func getVhostListOrCreate() {
-	if err := handler.NewClientVhost(); err != nil {
+func getVhostListOrCreate(localPort int) {
+	if err := handler.NewClientVhost(localPort); err != nil {
 		log.Println("[NewClientVhostError]", err.Error())
+		os.Exit(1)
+	}
+	if err := handler.ClientVhostList(); err != nil {
+		log.Println("[ClientVhostListError]", err.Error())
 		os.Exit(1)
 	}
 
