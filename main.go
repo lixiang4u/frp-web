@@ -77,9 +77,11 @@ func httpServer(port int) {
 	r.DELETE("/api/vhost/:vhost_id", handler.ApiServerRemoveVhost)
 	r.POST("/api/frp/reload", handler.ApiFrpReload)
 
-	r.GET("/", func(ctx *gin.Context) {
-		ctx.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/%s", frpWebRoot))
-	})
+	//r.GET("/", func(ctx *gin.Context) {
+	//	ctx.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/%s", frpWebRoot))
+	//})
+	//r.Static("/file/", filepath.Join("."))
+	r.StaticFS("/files/", http.Dir("."))
 
 	go func() { _ = r.Run(fmt.Sprintf(":%d", port)) }()
 	go openBrowser()

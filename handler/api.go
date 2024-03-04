@@ -135,12 +135,8 @@ func handlerVhostConfigTyped(pc v1.ProxyConfigurer, vhost model.Vhost) (proxyCfg
 		tmpC.CustomDomains = make([]string, 0)
 		tmpC.CustomDomains = append(tmpC.CustomDomains, vhost.CustomDomain)
 
-		log.Println("[HTTPProxyConfig.vhost]", utils.ToJsonString(vhost))
-		log.Println("[tmpC.HTTPProxyConfig]", utils.ToJsonString(tmpC))
 		proxyCfg = tmpC
 	case *v1.HTTPSProxyConfig:
-		log.Println("[HTTPSProxyConfig.vhost]", utils.ToJsonString(vhost))
-		log.Println("[tmpC.HTTPSProxyConfig]", utils.ToJsonString(tmpC))
 		proxyCfg = tmpC
 	default:
 

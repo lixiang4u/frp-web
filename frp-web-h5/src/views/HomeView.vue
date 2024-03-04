@@ -155,11 +155,25 @@ const createVhostColumns = () => {
       title: "公网域名",
       key: "custom_domain",
       resizable: true,
+      render(row) {
+        const tmpUrl = `${row.type}://${row.custom_domain}`
+        return [
+          h('div', {class: 'lh150'}, h('a', {href: tmpUrl, target: '_blank'}, tmpUrl)),
+          h('div', {class: 'lh150'}, h('a', {href: `${tmpUrl}/files/`, target: '_blank'}, `${tmpUrl}/files/`)),
+        ]
+      },
     },
     {
       title: "本地地址",
       key: "local_addr",
       resizable: true,
+      render(row) {
+        const tmpUrl = `${row.type}://${row.local_addr}`
+        return [
+          h('div', {class: 'lh150'}, h('a', {href: tmpUrl, target: '_blank'}, tmpUrl)),
+          h('div', {class: 'lh150'}, h('a', {href: `${tmpUrl}/files/`, target: '_blank'}, `${tmpUrl}/files/`)),
+        ]
+      },
     },
     {
       title: "操作",
@@ -352,7 +366,23 @@ const onBeforeMountHandler = () => {
     formServerConfigDisabled.value = true
     console.log('[getConfig-resp]', resp)
 
-    getVhostList()
+    // getVhostList()
+    api.getVhosts().then(resp => {
+      console.log('[getVhostList-resp]', resp)
+      vhosts.value = resp.data.vhosts
+
+      api.reloadVhost().then(resp => {
+        console.log('[reloadVhost-resp]', resp)
+      }).catch(err => {
+        console.log('[err]', err)
+        modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
+      })
+
+    }).catch(err => {
+      console.log('[err]', err)
+      modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
+    })
+
   }).catch(err => {
     console.log('[err]', err)
     modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
@@ -493,6 +523,10 @@ export default defineComponent({
 .btn-left {
   margin: 20px 0;
   display: flex;
+}
+
+:deep(.lh150) {
+  line-height: 200%;
 }
 
 </style>
