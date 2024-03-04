@@ -40,7 +40,7 @@
     <div class="plr40">
       <n-data-table :columns="vhostColumns" :data="vhosts" :bordered="false"/>
       <n-space class="btn-right">
-        <n-button type="primary" @click="showModalCreateVhost=true">添加</n-button>
+        <n-button type="primary" @click="onClickShowCreateOrUpdateVhost">添加</n-button>
       </n-space>
     </div>
 
@@ -77,21 +77,21 @@
               <n-input v-model:value="formProxyConfigValue.name" placeholder="请输入代理名称" :attr-size="16"/>
             </n-form-item-gi>
 
-            <n-form-item-gi :span="12" label="本地地址" path="localAddr">
-              <n-input v-model:value="formProxyConfigValue.localAddr" placeholder="请输入本地地址"
+            <n-form-item-gi :span="12" label="本地地址" path="local_addr">
+              <n-input v-model:value="formProxyConfigValue.local_addr" placeholder="请输入本地地址"
                        :attr-size="16"/>
             </n-form-item-gi>
-            <n-form-item-gi :span="12" label="公网域名" path="customDomain">
-              <n-input disabled v-model:value="formProxyConfigValue.customDomain" placeholder="请输入公网域名"
+            <n-form-item-gi :span="12" label="公网域名" path="custom_domain">
+              <n-input disabled v-model:value="formProxyConfigValue.custom_domain" placeholder="请输入公网域名"
                        :attr-size="45"/>
             </n-form-item-gi>
 
-            <n-form-item-gi :span="12" label="证书文件(https)" path="crtPath">
-              <n-input disabled v-model:value="formProxyConfigValue.crtPath" placeholder="请输入证书文件(https)"
+            <n-form-item-gi :span="12" label="证书文件(https)" path="crt_path">
+              <n-input disabled v-model:value="formProxyConfigValue.crt_path" placeholder="请输入证书文件(https)"
                        :attr-size="16"/>
             </n-form-item-gi>
-            <n-form-item-gi :span="12" label="证书密钥(https)" path="keyPath">
-              <n-input disabled v-model:value="formProxyConfigValue.keyPath" placeholder="请输入证书密钥(https)"
+            <n-form-item-gi :span="12" label="证书密钥(https)" path="key_path">
+              <n-input disabled v-model:value="formProxyConfigValue.key_path" placeholder="请输入证书密钥(https)"
                        :attr-size="16"/>
             </n-form-item-gi>
           </n-grid>
@@ -126,37 +126,7 @@ const formServerConfigRef = ref(null)
 
 const showModalCreateVhost = ref(false)
 
-const vhosts = ref([
-  {
-    type: 'http',
-    name: 'waf',
-    localPort: 9966,
-    customDomains: ['waf.lixiang4u.xyz'],
-  }, {
-    type: 'https',
-    name: 'waf(s)',
-    localPort: 9966,
-    customDomains: ['waf.lixiang4u.xyz'],
-  }, {
-    type: 'http',
-    name: 'frp01',
-    customDomain: 'frp01.lixiang4u.xyz',
-    customDomains: ['frp01.lixiang4u.xyz'],
-    localPort: 8601,
-    localAddr: '127.0.0.1:8601',
-    crtPath: null,
-    keyPath: null,
-  }, {
-    type: 'https',
-    name: 'frp01(s)',
-    customDomain: 'frp01.lixiang4u.xyz',
-    customDomains: ['frp01.lixiang4u.xyz'],
-    localPort: 8601,
-    localAddr: '127.0.0.1:8601',
-    crtPath: './archive/frp01.lixiang4u.xyz/fullchain1.pem',
-    keyPath: './archive/frp01.lixiang4u.xyz/privkey1.pem',
-  }
-])
+const vhosts = ref([])
 
 const createVhostColumns = () => {
   return [
@@ -183,12 +153,12 @@ const createVhostColumns = () => {
     },
     {
       title: "公网域名",
-      key: "customDomain",
+      key: "custom_domain",
       resizable: true,
     },
     {
       title: "本地地址",
-      key: "localAddr",
+      key: "local_addr",
       resizable: true,
     },
     {
@@ -254,16 +224,28 @@ const onClickConnectServer = () => {
 
 const onClickVhostSave = () => {
   formProxyConfigRef.value?.validate(errors => {
-    console.log('[errors]', errors)
-    console.log('[formProxyConfigValue]', formProxyConfigValue.value)
-    console.log('[vhosts]', vhosts.value)
-    if (errors) {
-      message.error("配置错误")
-    } else {
-      addVhostToList(formProxyConfigValue.value)
-      clearFormProxyConfigValue()
+    api.newVhost({
+      type: formProxyConfigValue.value.type,
+      local_addr: formProxyConfigValue.value.local_addr,
+      name: formProxyConfigValue.value.name,
+    }).then(resp => {
+      console.log('[newVhost-resp]', resp)
+
+      getVhostList()
+
+    }).catch(err => {
+      console.log('[err]', err)
+      modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
+    }).finally(() => {
       showModalCreateVhost.value = false
-    }
+    })
+    // if (errors) {
+    //   message.error("配置错误")
+    // } else {
+    //   addVhostToList(formProxyConfigValue.value)
+    //   clearFormProxyConfigValue()
+    //   showModalCreateVhost.value = false
+    // }
   })
 
 }
@@ -279,7 +261,16 @@ const addVhostToList = (data) => {
 }
 
 const removeVhostFromList = (data, index) => {
-  vhosts.value.splice(index, 1)
+  api.removeVhost(data.id).then(resp => {
+    console.log('[removeVhost-resp]', resp)
+
+    getVhostList()
+
+  }).catch(err => {
+    console.log('[err]', err)
+    modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
+  })
+  // vhosts.value.splice(index, 1)
 }
 
 const formProxyConfigRules = {
@@ -291,7 +282,7 @@ const formProxyConfigRules = {
     required: true,
     message: "请输入名称",
   },
-  localAddr: {
+  local_addr: {
     required: true,
     message: "请输入本地地址",
   },
@@ -330,24 +321,25 @@ const formProxyConfigRef = ref()
 const formProxyConfigValue = ref({
   type: null,
   name: null,
-  customDomain: null,
-  customDomains: [],
-  localPort: null,
-  localAddr: null,
-  crtPath: null,
-  keyPath: null,
+  custom_domain: null,
+  custom_domains: [],
+  local_port: null,
+  local_addr: null,
+  crt_path: null,
+  key_path: null,
 })
 
 const clearFormProxyConfigValue = () => {
   formProxyConfigValue.value = {
+    id: null,
     type: null,
     name: null,
-    customDomain: null,
-    customDomains: [],
-    localPort: null,
-    localAddr: null,
-    crtPath: null,
-    keyPath: null,
+    custom_domain: null,
+    custom_domains: [],
+    local_port: null,
+    local_addr: null,
+    crt_path: null,
+    key_path: null,
   }
 }
 
@@ -358,6 +350,19 @@ const onBeforeMountHandler = () => {
     resp.data.config.vhost_https_port = '' + resp.data.config.vhost_https_port
     formServerConfigValue.value = resp.data.config
     formServerConfigDisabled.value = true
+    console.log('[getConfig-resp]', resp)
+
+    getVhostList()
+  }).catch(err => {
+    console.log('[err]', err)
+    modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
+  })
+}
+
+const getVhostList = () => {
+  api.getVhosts().then(resp => {
+    console.log('[getVhostList-resp]', resp)
+    vhosts.value = resp.data.vhosts
   }).catch(err => {
     console.log('[err]', err)
     modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
@@ -384,6 +389,12 @@ const loadVhostOrCreate = () => {
   })
 }
 
+
+const onClickShowCreateOrUpdateVhost = () => {
+  clearFormProxyConfigValue()
+  showModalCreateVhost.value = true
+}
+
 export default defineComponent({
   components: {
     ModalTipsComponent,
@@ -407,6 +418,7 @@ export default defineComponent({
       vhostColumns,
       formServerConfigDisabled,
       showModalCreateVhost,
+      onClickShowCreateOrUpdateVhost,
       onClickVhostSave,
       formProxyConfigValue,
       modalTipsRef,

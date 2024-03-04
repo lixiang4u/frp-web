@@ -11,9 +11,14 @@ export default {
             '/api/vhost', data
         )
     },
-    getVhosts: (params) => {
+    getVhosts: () => {
         return request.get(
-            '/api/vhosts', params
+            '/api/vhosts'
+        )
+    },
+    removeVhost: (vhostId) => {
+        return request.delete(
+            `/api/vhost/${vhostId}`
         )
     },
 
