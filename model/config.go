@@ -11,6 +11,7 @@ import (
 var (
 	ApiServerHost string
 	AppMachineId  string
+	AppFrpRun     = false
 )
 
 func init() {

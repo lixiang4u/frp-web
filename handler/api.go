@@ -207,13 +207,27 @@ func runFrpClient(serverAddr string, serverPort int, vhosts []model.Vhost) error
 		return err
 	}
 
-	shouldGracefulClose := cfg.Transport.Protocol == "kcp" || cfg.Transport.Protocol == "quic"
-	// Capture the exit signal if we use kcp or quic.
-	if shouldGracefulClose {
-		go utils.FrpTermSignal(svr)
+	if model.AppFrpRun == false {
+		model.AppFrpRun = true
+
+		shouldGracefulClose := cfg.Transport.Protocol == "kcp" || cfg.Transport.Protocol == "quic"
+		// Capture the exit signal if we use kcp or quic.
+		if shouldGracefulClose {
+			go utils.FrpTermSignal(svr)
+		}
+
+		err = svr.Run(context.Background())
+		if err != nil {
+			log.Println("[frpRunError]", err.Error())
+		}
+	} else {
+		err = svr.UpdateAllConfigurer(proxyCfgs, visitorCfgs)
+		if err != nil {
+			log.Println("[frpUpdateConfigError]", err.Error())
+		}
 	}
 
-	return svr.Run(context.Background())
+	return err
 }
 
 func NewClientVhost(localPort int) error {
