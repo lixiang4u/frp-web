@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"github.com/fatedier/frp/client"
 	"github.com/fatedier/frp/pkg/config"
@@ -13,16 +14,24 @@ import (
 	"github.com/spf13/viper"
 	"io/fs"
 	"log"
+	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"syscall"
 	"time"
 )
 
+//go:embed frp-web-h5/dist
+var content embed.FS
+
 var (
 	cfgFilePath = fakeEmptyConfig()
 	port        = utils.IWantUseHttpPort()
+	frpWebRoot  = "frp-web" // 同 frp-web-h5/vite.config.js 中 base 值
 )
 
 func main() {
@@ -61,24 +70,14 @@ func httpServer(port int) {
 		MaxAge: 12 * time.Hour,
 	}))
 
-	r.Static("/static", utils.AppPath())
-
+	r.Static(fmt.Sprintf("/%s", frpWebRoot), filepath.Join("frp-web-h5", "dist"))
 	r.GET("/api/config", handler.ApiServerConfig)
+	r.GET("/", func(ctx *gin.Context) {
+		ctx.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/%s", frpWebRoot))
+	})
 
-	go func() {
-		_ = r.Run(fmt.Sprintf(":%d", port))
-	}()
-	//go func() {
-	//	var osName = strings.ToLower(runtime.GOOS)
-	//	switch osName {
-	//	case "windows":
-	//		cmd := exec.Command("cmd", "/c", "start", fmt.Sprintf("http://127.0.0.1:%d", port))
-	//		_ = cmd.Run()
-	//	case "darwin":
-	//		cmd := exec.Command("open", fmt.Sprintf("http://127.0.0.1:%d", port))
-	//		_ = cmd.Run()
-	//	}
-	//}()
+	go func() { _ = r.Run(fmt.Sprintf(":%d", port)) }()
+	go openBrowser()
 
 	select {
 	case _sig := <-sig:
@@ -164,6 +163,18 @@ func handleTermSignal(svr *client.Service) {
 	svr.GracefulClose(500 * time.Millisecond)
 }
 
+func openBrowser() {
+	var osName = strings.ToLower(runtime.GOOS)
+	switch osName {
+	case "windows":
+		cmd := exec.Command("cmd", "/c", "start", fmt.Sprintf("http://127.0.0.1:%d/%s", port, frpWebRoot))
+		_ = cmd.Run()
+	case "darwin":
+		cmd := exec.Command("open", fmt.Sprintf("http://127.0.0.1:%d/%s", port, frpWebRoot))
+		_ = cmd.Run()
+	}
+}
+
 func getVhostListOrCreate(localPort int) {
 	if err := handler.NewClientVhost(localPort); err != nil {
 		log.Println("[NewClientVhostError]", err.Error())
@@ -173,5 +184,4 @@ func getVhostListOrCreate(localPort int) {
 		log.Println("[ClientVhostListError]", err.Error())
 		os.Exit(1)
 	}
-
 }
