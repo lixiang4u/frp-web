@@ -10,6 +10,7 @@ import (
 )
 
 func HttpPost(requestUrl string, requestBody []byte) (int, []byte, error) {
+	log.Println("[requestUrl]", requestUrl)
 	resp, err := http.Post(requestUrl, "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
 		log.Println("[postError]", err.Error())
@@ -49,6 +50,7 @@ func HttpGet(requestUrl string, params ...url.Values) (int, []byte, error) {
 }
 
 func HttpDelete(requestUrl string, requestBody []byte) (int, []byte, error) {
+	log.Println("[requestUrl]", requestUrl)
 	req, err := http.NewRequest("DELETE", requestUrl, bytes.NewBuffer(requestBody))
 	if err != nil {
 		log.Println("[deleteError]", err.Error())

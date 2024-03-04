@@ -71,30 +71,40 @@ func ApiServerRemoveVhost(ctx *gin.Context) {
 }
 
 func ApiFrpReload(ctx *gin.Context) {
-	var params = url.Values{}
-	params.Add("machine_id", model.AppMachineId)
-
-	code, buf, _ := utils.HttpGet(fmt.Sprintf("%s/api/vhosts", model.ApiServerHost), params)
+	_, buf, _ := utils.HttpGet(fmt.Sprintf("%s/api/config", model.ApiServerHost))
 
 	type Resp struct {
-		Code   int           `json:"code"`
-		Vhosts []model.Vhost `json:"vhosts"`
+		Code   int `json:"code"`
+		Config struct {
+			BindPort       int    `json:"bind_port"`
+			VhostHttpPort  int    `json:"vhost_http_port"`
+			VhostHttpsPort int    `json:"vhost_https_port"`
+			Host           string `json:"host"`
+		} `json:"config"`
 	}
 	var resp Resp
 	_ = json.Unmarshal(buf, &resp)
-	if code != http.StatusOK {
-		ctx.JSON(code, resp)
-		return
-	}
 	if resp.Code != http.StatusOK {
-		ctx.JSON(resp.Code, resp)
+		ctx.JSON(http.StatusOK, gin.H{
+			"code": http.StatusInternalServerError,
+			"msg":  "frp服务器信息获取失败",
+		})
 		return
 	}
 
-	//
+	vhosts, err := apiGetVhosts()
+	if err != nil {
+		ctx.JSON(http.StatusOK, gin.H{
+			"code": http.StatusInternalServerError,
+			"msg":  err.Error(),
+		})
+		return
+	}
 
 	go func() {
-		if err := runFrpClient(resp.Vhosts); err != nil {
+		log.Println(fmt.Sprintf("[frpServer] %s:%d", resp.Config.Host, resp.Config.BindPort))
+
+		if err := runFrpClient(resp.Config.Host, resp.Config.BindPort, vhosts); err != nil {
 			log.Println("[frpClientError]", err.Error())
 		}
 	}()
@@ -138,11 +148,59 @@ func handlerVhostConfigTyped(pc v1.ProxyConfigurer, vhost model.Vhost) (proxyCfg
 	return proxyCfg
 }
 
-func runFrpClient(vhosts []model.Vhost) error {
+func apiGetVhosts() ([]model.Vhost, error) {
+	var params = url.Values{}
+	params.Add("machine_id", model.AppMachineId)
+
+	code, buf, _ := utils.HttpGet(fmt.Sprintf("%s/api/vhosts", model.ApiServerHost), params)
+
+	type Resp struct {
+		Code   int           `json:"code"`
+		Msg    string        `json:"msg"`
+		Vhosts []model.Vhost `json:"vhosts"`
+	}
+	var resp Resp
+	_ = json.Unmarshal(buf, &resp)
+	if code != http.StatusOK {
+		return nil, errors.New(fmt.Sprintf("请求失败：status_code=%d", code))
+	}
+	if resp.Code != http.StatusOK {
+		return nil, errors.New(resp.Msg)
+	}
+	return resp.Vhosts, nil
+}
+
+//
+//func apiGetConfig() {
+//	code, buf, _ := utils.HttpGet(fmt.Sprintf("%s/api/config", model.ApiServerHost))
+//
+//	type Resp struct {
+//		Code   int `json:"code"`
+//		Config struct {
+//			BindPort       int    `json:"bind_port"`
+//			VhostHttpPort  int    `json:"vhost_http_port"`
+//			VhostHttpsPort int    `json:"vhost_https_port"`
+//			Host           string `json:"host"`
+//		} `json:"config"`
+//	}
+//
+//	var resp Resp
+//	_ = json.Unmarshal(buf, &resp)
+//
+//	ctx.JSON(code, resp)
+//
+//}
+
+func runFrpClient(serverAddr string, serverPort int, vhosts []model.Vhost) error {
 	var cfg = &v1.ClientCommonConfig{}
 	cfg.Complete()
+
+	cfg.ServerAddr = serverAddr
+	cfg.ServerPort = serverPort
+
 	var proxyCfgs = handlerVhostConfig(vhosts)
 	var visitorCfgs = make([]v1.VisitorConfigurer, 0)
+
 	svr, err := client.NewService(client.ServiceOptions{
 		Common:         cfg,
 		ProxyCfgs:      proxyCfgs,
