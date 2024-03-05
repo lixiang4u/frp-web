@@ -49,7 +49,7 @@ func ApiServerCreateVhost(ctx *gin.Context) {
 	_ = ctx.ShouldBind(&req)
 
 	var body = utils.ToJsonString(gin.H{
-		"type":       string(v1.ProxyTypeHTTP),
+		"type":       req.Type,
 		"machine_id": model.AppMachineId,
 		"local_addr": req.LocalAddr,
 		"name":       req.Name,
