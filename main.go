@@ -91,11 +91,11 @@ func openBrowser() {
 func getVhostListOrCreate(localPort int) {
 	if err := handler.NewClientVhost(localPort); err != nil {
 		log.Println("[NewClientVhostError]", err.Error())
-		os.Exit(1)
+		utils.WaitInputExit()
 	}
 	if err := handler.ClientVhostList(); err != nil {
 		log.Println("[ClientVhostListError]", err.Error())
-		os.Exit(1)
+		utils.WaitInputExit()
 	}
 }
 
@@ -104,6 +104,6 @@ func appOneInstanceCheck() {
 	appRunFile, err = os.OpenFile(appLockFile, os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		log.Println("程序已运行：" + err.Error())
-		os.Exit(1)
+		utils.WaitInputExit()
 	}
 }
