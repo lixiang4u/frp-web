@@ -18,11 +18,22 @@ import (
 )
 
 var (
-	frpWebRoot = "frp-web" // 同 frp-web-h5/vite.config.js 中 base 值
-	port       = utils.IWantUseHttpPort()
+	frpWebRoot  = "frp-web" // 同 frp-web-h5/vite.config.js 中 base 值
+	port        = utils.IWantUseHttpPort()
+	appLockFile = "run.lock"
+	appRunFile  *os.File
 )
 
 func main() {
+	defer func() {
+		if appRunFile != nil {
+			_ = appRunFile.Close()
+		}
+		_ = os.Remove(appLockFile)
+	}()
+
+	appOneInstanceCheck()
+
 	go getVhostListOrCreate(port)
 
 	httpServer(port)
@@ -84,6 +95,15 @@ func getVhostListOrCreate(localPort int) {
 	}
 	if err := handler.ClientVhostList(); err != nil {
 		log.Println("[ClientVhostListError]", err.Error())
+		os.Exit(1)
+	}
+}
+
+func appOneInstanceCheck() {
+	var err error
+	appRunFile, err = os.OpenFile(appLockFile, os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		log.Println("程序已运行：" + err.Error())
 		os.Exit(1)
 	}
 }
