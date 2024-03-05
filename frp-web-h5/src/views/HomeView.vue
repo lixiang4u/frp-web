@@ -52,6 +52,13 @@
     </div>
 
     <div class="ptb20"></div>
+    <div class="ptb20"></div>
+
+    <div class="plr40">
+      <div class="grey">
+        更新地址：<a class="grey" href="https://github.com/lixiang4u/frp-web/releases/">frp-web</a>
+      </div>
+    </div>
 
     <n-modal v-model:show="showModalCreateVhost" preset="dialog" style="width: auto">
       <template #header>
@@ -527,6 +534,10 @@ export default defineComponent({
 
 :deep(.lh150) {
   line-height: 200%;
+}
+
+.grey{
+  color: #c3c3c3;
 }
 
 </style>
