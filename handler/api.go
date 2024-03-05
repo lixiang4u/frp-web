@@ -162,14 +162,15 @@ func ApiNotRoute(ctx *gin.Context) {
 	tmpFile, _ := filepath.Abs(filepath.Join(".", ctx.Request.RequestURI))
 	_, err := os.Stat(tmpFile)
 	if err == nil && strings.HasPrefix(tmpFile, root) {
+		ctx.Status(http.StatusOK)
 		ctx.File(tmpFile)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
+	ctx.JSON(http.StatusNotFound, gin.H{
 		"code": 404,
 		"msg":  "请求地址错误",
-		"uri":  ctx.Request.RequestURI,
+		"path": ctx.Request.RequestURI,
 	})
 }
 
