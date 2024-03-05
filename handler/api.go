@@ -185,7 +185,6 @@ func handlerVhostConfigTyped(pc v1.ProxyConfigurer, vhost model.Vhost) (proxyCfg
 	host, port, _ := net.SplitHostPort(vhost.LocalAddr)
 	switch tmpC := pc.(type) {
 	case *v1.HTTPProxyConfig:
-		//tmpC.Type = ""
 		tmpC.Name = vhost.Name
 		tmpC.Transport.BandwidthLimitMode = "client"
 
@@ -197,11 +196,55 @@ func handlerVhostConfigTyped(pc v1.ProxyConfigurer, vhost model.Vhost) (proxyCfg
 
 		proxyCfg = tmpC
 	case *v1.HTTPSProxyConfig:
+		certFile, keyFile, _ := parseCertToFile(vhost.Id, []byte(vhost.CrtPath), []byte(vhost.KeyPath))
+
+		// 参考frp实际运行的配置数据结构填充
+		tmpC.Name = vhost.Name
+		tmpC.Transport.BandwidthLimitMode = "client"
+
+		tmpC.LocalIP = host
+		tmpC.LocalPort = utils.StringToInt(port)
+
+		tmpC.CustomDomains = make([]string, 0)
+		tmpC.CustomDomains = append(tmpC.CustomDomains, vhost.CustomDomain)
+
+		tmpC.Plugin.Type = "https2http"
+		tmpC.Plugin.ClientPluginOptions = &v1.HTTPS2HTTPPluginOptions{
+			Type:              "https2http",
+			LocalAddr:         vhost.LocalAddr,
+			HostHeaderRewrite: tmpC.LocalIP,
+			RequestHeaders: v1.HeaderOperations{
+				Set: map[string]string{
+					"x-from-where": "frp",
+				},
+			},
+			CrtPath: certFile,
+			KeyPath: keyFile,
+		}
+
 		proxyCfg = tmpC
 	default:
 
 	}
 	return proxyCfg
+}
+
+func parseCertToFile(vhostId string, certBuf, keyBuf []byte) (certFile, keyFile string, err error) {
+	certFile = utils.AppTempFile("certs", fmt.Sprintf("%s-cert.pem", vhostId))
+	keyFile = utils.AppTempFile("certs", fmt.Sprintf("%s-key.pem", vhostId))
+	if !utils.FileExists(certFile) {
+		if err = os.WriteFile(certFile, certBuf, fs.ModePerm); err != nil {
+			log.Println("[CertFileSaveError] ", vhostId, certFile)
+			return
+		}
+	}
+	if !utils.FileExists(keyFile) {
+		if err = os.WriteFile(keyFile, keyBuf, fs.ModePerm); err != nil {
+			log.Println("[KeyFileSaveError] ", vhostId, certFile)
+			return
+		}
+	}
+	return
 }
 
 func apiGetVhosts() ([]model.Vhost, error) {
