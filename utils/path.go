@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -11,4 +12,11 @@ func AppPath() string {
 		return ""
 	}
 	return dir
+}
+
+func AppTempFile(elem ...string) string {
+	elem = append([]string{os.TempDir(), "frp-web"}, elem...)
+	var tmpFile = filepath.Join(elem...)
+	_ = os.MkdirAll(filepath.Dir(tmpFile), fs.ModePerm)
+	return tmpFile
 }

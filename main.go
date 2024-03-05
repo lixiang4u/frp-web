@@ -65,7 +65,7 @@ func httpServer(port int) {
 		MaxAge: 12 * time.Hour,
 	}))
 
-	r.Static(fmt.Sprintf("/%s", frpWebRoot), filepath.Join("frp-web-h5", "dist"))
+	r.Static(fmt.Sprintf("/%s/", frpWebRoot), filepath.Join("frp-web-h5", "dist"))
 	r.GET("/api/config", handler.ApiServerConfig)
 	r.POST("/api/vhost", handler.ApiServerCreateVhost)
 	r.GET("/api/vhosts", handler.ApiServerVhostList)

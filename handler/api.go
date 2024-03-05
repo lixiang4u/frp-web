@@ -10,6 +10,7 @@ import (
 	"github.com/go-jose/go-jose/v3/json"
 	"github.com/lixiang4u/frp-web/model"
 	"github.com/lixiang4u/frp-web/utils"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -56,8 +57,48 @@ func ApiServerCreateVhost(ctx *gin.Context) {
 	})
 	code, buf, _ := utils.HttpPost(fmt.Sprintf("%s/api/vhost", model.ApiServerHost), []byte(body))
 
-	var resp gin.H
+	type Resp struct {
+		Code  int         `json:"code"`
+		Msg   string      `json:"msg"`
+		Vhost model.Vhost `json:"vhost"`
+	}
+	var resp Resp
 	_ = json.Unmarshal(buf, &resp)
+	if resp.Code != http.StatusOK {
+		ctx.JSON(http.StatusOK, gin.H{
+			"code": resp.Code,
+			"msg":  resp.Msg,
+		})
+		return
+	}
+
+	if resp.Vhost.Type == string(v1.ProxyTypeHTTPS) {
+		if !strings.Contains(resp.Vhost.CrtPath, "CERTIFICATE") {
+			_, _, _ = utils.HttpDelete(fmt.Sprintf("%s/api/vhost/%s/%s", model.ApiServerHost, model.AppMachineId, resp.Vhost.Id), nil)
+			ctx.JSON(http.StatusOK, gin.H{
+				"code": 500,
+				"msg":  "证书文件错误(cert)",
+			})
+			return
+		}
+		if !strings.Contains(resp.Vhost.KeyPath, "PRIVATE KEY") {
+			_, _, _ = utils.HttpDelete(fmt.Sprintf("%s/api/vhost/%s/%s", model.ApiServerHost, model.AppMachineId, resp.Vhost.Id), nil)
+			ctx.JSON(http.StatusOK, gin.H{
+				"code": 500,
+				"msg":  "证书文件错误(key)",
+			})
+			return
+		}
+		_, _, err := parseCertToFile(resp.Vhost.Id, []byte(resp.Vhost.CrtPath), []byte(resp.Vhost.KeyPath))
+		if err != nil {
+			_, _, _ = utils.HttpDelete(fmt.Sprintf("%s/api/vhost/%s/%s", model.ApiServerHost, model.AppMachineId, resp.Vhost.Id), nil)
+			ctx.JSON(http.StatusOK, gin.H{
+				"code": 500,
+				"msg":  fmt.Sprintf("证书保存失败：%s", err.Error()),
+			})
+			return
+		}
+	}
 
 	ctx.JSON(code, resp)
 }
