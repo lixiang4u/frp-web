@@ -1,17 +1,11 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"github.com/fatedier/frp/client"
-	"github.com/fatedier/frp/pkg/config"
-	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/lixiang4u/frp-web/handler"
 	"github.com/lixiang4u/frp-web/utils"
-	"github.com/spf13/viper"
-	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -24,9 +18,8 @@ import (
 )
 
 var (
-	cfgFilePath = fakeEmptyConfig()
-	port        = utils.IWantUseHttpPort()
-	frpWebRoot  = "frp-web" // 同 frp-web-h5/vite.config.js 中 base 值
+	frpWebRoot = "frp-web" // 同 frp-web-h5/vite.config.js 中 base 值
+	port       = utils.IWantUseHttpPort()
 )
 
 func main() {
@@ -34,17 +27,6 @@ func main() {
 
 	httpServer(port)
 
-}
-
-func fakeEmptyConfig() string {
-	var yamlFile = filepath.Join(os.TempDir(), "frp-web", fmt.Sprintf("tmp-frp-config-empty.toml"))
-	_ = os.MkdirAll(filepath.Dir(yamlFile), fs.ModePerm)
-	_ = os.Remove(yamlFile)
-	var v = viper.New()
-	if e := v.WriteConfigAs(yamlFile); e != nil {
-		log.Println("[writeConfigError]", e.Error())
-	}
-	return yamlFile
 }
 
 func httpServer(port int) {
@@ -72,11 +54,6 @@ func httpServer(port int) {
 	r.DELETE("/api/vhost/:vhost_id", handler.ApiServerRemoveVhost)
 	r.POST("/api/frp/reload", handler.ApiFrpReload)
 
-	//r.GET("/", func(ctx *gin.Context) {
-	//	ctx.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/%s", frpWebRoot))
-	//})
-	//r.Static("/file/", filepath.Join("."))
-	//r.StaticFS("/files/", http.Dir("."))
 	r.NoRoute(handler.ApiNotRoute)
 
 	go func() { _ = r.Run(fmt.Sprintf(":%d", port)) }()
@@ -86,84 +63,6 @@ func httpServer(port int) {
 	case _sig := <-sig:
 		log.Println(fmt.Sprintf("[stop] %v\n", _sig))
 	}
-}
-
-func runFrpService() error {
-	cfg, proxyCfgs, visitorCfgs, isLegacyFormat, err := config.LoadClientConfig(cfgFilePath, false)
-	if err != nil {
-		return err
-	}
-	if isLegacyFormat {
-		fmt.Printf("WARNING: ini format is deprecated and the support will be removed in the future, " +
-			"please use yaml/json/toml format instead!\n")
-	}
-
-	var a = v1.ClientConfig{}
-	a.Proxies = make([]v1.TypedProxyConfig, 1)
-	a.Proxies[0].Type = string(v1.ProxyTypeHTTP)
-	a.Proxies[0].ProxyConfigurer = v1.NewProxyConfigurerByType(v1.ProxyTypeHTTP)
-
-	a.Proxies[0] = v1.TypedProxyConfig{Type: "A", ProxyConfigurer: v1.NewProxyConfigurerByType(v1.ProxyTypeHTTP)}
-
-	proxyCfgs = append(proxyCfgs, a.Proxies[0])
-
-	//log.InitLog(cfg.Log.To, cfg.Log.Level, cfg.Log.MaxDays, cfg.Log.DisablePrintColor)
-
-	//if cfgFile != "" {
-	//	log.Info("start frpc service for config file [%s]", cfgFile)
-	//	defer log.Info("frpc service for config file [%s] stopped", cfgFile)
-	//}
-	cfgFilePath = ""
-	svr, err := client.NewService(client.ServiceOptions{
-		Common:         cfg,
-		ProxyCfgs:      proxyCfgs,
-		VisitorCfgs:    visitorCfgs,
-		ConfigFilePath: cfgFilePath,
-	})
-	if err != nil {
-		return err
-	}
-
-	//_ = os.Remove(cfgFilePath)
-
-	shouldGracefulClose := cfg.Transport.Protocol == "kcp" || cfg.Transport.Protocol == "quic"
-	// Capture the exit signal if we use kcp or quic.
-	if shouldGracefulClose {
-		go handleTermSignal(svr)
-	}
-
-	log.Println("[====================1>]", utils.ToJsonString(map[string]interface{}{
-		"cfgFilePath":    cfgFilePath,
-		"cfg":            cfg,
-		"proxyCfgs":      proxyCfgs,
-		"visitorCfgs":    visitorCfgs,
-		"isLegacyFormat": isLegacyFormat,
-	}))
-
-	var cgf = v1.ClientConfig{}
-	cgf.Complete()
-
-	var ff = v1.ProxyBaseConfig{}
-	ff.Complete("http")
-	ff.LocalIP = ""
-	var dd = v1.TypedClientPluginOptions{}
-	dd.ClientPluginOptions = v1.HTTPS2HTTPPluginOptions{}
-	ff.Plugin = dd
-
-	log.Println("[====================2>]", utils.ToJsonString(map[string]interface{}{
-		"cfgFilePath": cfgFilePath,
-		"cfg":         cgf,
-		"proxyCfgs":   ff,
-	}))
-
-	return svr.Run(context.Background())
-}
-
-func handleTermSignal(svr *client.Service) {
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-	<-ch
-	svr.GracefulClose(500 * time.Millisecond)
 }
 
 func openBrowser() {

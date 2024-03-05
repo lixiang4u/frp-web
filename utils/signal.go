@@ -14,3 +14,10 @@ func FrpTermSignal(svr *client.Service) {
 	<-ch
 	svr.GracefulClose(500 * time.Millisecond)
 }
+
+func FrpCloseRecover(svr *client.Service) {
+	defer func() {
+		recover()
+	}()
+	svr.GracefulClose(500 * time.Millisecond)
+}

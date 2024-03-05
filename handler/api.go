@@ -89,6 +89,7 @@ func ApiServerCreateVhost(ctx *gin.Context) {
 			})
 			return
 		}
+		removeCertFile(resp.Vhost.Id)
 		_, _, err := parseCertToFile(resp.Vhost.Id, []byte(resp.Vhost.CrtPath), []byte(resp.Vhost.KeyPath))
 		if err != nil {
 			_, _, _ = utils.HttpDelete(fmt.Sprintf("%s/api/vhost/%s/%s", model.ApiServerHost, model.AppMachineId, resp.Vhost.Id), nil)
@@ -229,6 +230,11 @@ func handlerVhostConfigTyped(pc v1.ProxyConfigurer, vhost model.Vhost) (proxyCfg
 	return proxyCfg
 }
 
+func removeCertFile(vhostId string) {
+	_ = os.Remove(utils.AppTempFile("certs", fmt.Sprintf("%s-cert.pem", vhostId)))
+	_ = os.Remove(utils.AppTempFile("certs", fmt.Sprintf("%s-key.pem", vhostId)))
+}
+
 func parseCertToFile(vhostId string, certBuf, keyBuf []byte) (certFile, keyFile string, err error) {
 	certFile = utils.AppTempFile("certs", fmt.Sprintf("%s-cert.pem", vhostId))
 	keyFile = utils.AppTempFile("certs", fmt.Sprintf("%s-key.pem", vhostId))
@@ -269,28 +275,9 @@ func apiGetVhosts() ([]model.Vhost, error) {
 	return resp.Vhosts, nil
 }
 
-//
-//func apiGetConfig() {
-//	code, buf, _ := utils.HttpGet(fmt.Sprintf("%s/api/config", model.ApiServerHost))
-//
-//	type Resp struct {
-//		Code   int `json:"code"`
-//		Config struct {
-//			BindPort       int    `json:"bind_port"`
-//			VhostHttpPort  int    `json:"vhost_http_port"`
-//			VhostHttpsPort int    `json:"vhost_https_port"`
-//			Host           string `json:"host"`
-//		} `json:"config"`
-//	}
-//
-//	var resp Resp
-//	_ = json.Unmarshal(buf, &resp)
-//
-//	ctx.JSON(code, resp)
-//
-//}
+var svr *client.Service
 
-func runFrpClient(serverAddr string, serverPort int, vhosts []model.Vhost) error {
+func runFrpClient(serverAddr string, serverPort int, vhosts []model.Vhost) (err error) {
 	var cfg = &v1.ClientCommonConfig{}
 	cfg.Complete()
 
@@ -300,7 +287,9 @@ func runFrpClient(serverAddr string, serverPort int, vhosts []model.Vhost) error
 	var proxyCfgs = handlerVhostConfig(vhosts)
 	var visitorCfgs = make([]v1.VisitorConfigurer, 0)
 
-	svr, err := client.NewService(client.ServiceOptions{
+	utils.FrpCloseRecover(svr)
+
+	svr, err = client.NewService(client.ServiceOptions{
 		Common:         cfg,
 		ProxyCfgs:      proxyCfgs,
 		VisitorCfgs:    visitorCfgs,
@@ -310,24 +299,14 @@ func runFrpClient(serverAddr string, serverPort int, vhosts []model.Vhost) error
 		return err
 	}
 
-	if model.AppFrpRun == false {
-		model.AppFrpRun = true
-
-		shouldGracefulClose := cfg.Transport.Protocol == "kcp" || cfg.Transport.Protocol == "quic"
-		// Capture the exit signal if we use kcp or quic.
-		if shouldGracefulClose {
-			go utils.FrpTermSignal(svr)
-		}
-
-		err = svr.Run(context.Background())
-		if err != nil {
-			log.Println("[frpRunError]", err.Error())
-		}
-	} else {
-		err = svr.UpdateAllConfigurer(proxyCfgs, visitorCfgs)
-		if err != nil {
-			log.Println("[frpUpdateConfigError]", err.Error())
-		}
+	shouldGracefulClose := cfg.Transport.Protocol == "kcp" || cfg.Transport.Protocol == "quic"
+	// Capture the exit signal if we use kcp or quic.
+	if shouldGracefulClose {
+		go utils.FrpTermSignal(svr)
+	}
+	err = svr.Run(context.Background())
+	if err != nil {
+		log.Println("[frpRunError]", err.Error())
 	}
 
 	return err
