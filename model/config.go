@@ -11,6 +11,7 @@ import (
 var (
 	ApiServerHost string
 	AppMachineId  string
+	AppInstance1  string
 )
 
 func init() {
@@ -32,4 +33,5 @@ func init() {
 		utils.WaitInputExit()
 	}
 	ApiServerHost = strings.TrimRight(viper.GetString("app.server"), "/")
+	AppInstance1 = strings.TrimSpace(viper.GetString("app.instance1"))
 }
