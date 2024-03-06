@@ -7,6 +7,7 @@ import (
 	"github.com/lixiang4u/frp-web/handler"
 	"github.com/lixiang4u/frp-web/utils"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -25,25 +26,21 @@ var (
 )
 
 func main() {
-	defer func() {
-		if appRunFile != nil {
-			_ = appRunFile.Close()
-		}
-		_ = os.Remove(appLockFile)
-	}()
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGKILL)
 
 	appOneInstanceCheck()
-
 	go getVhostListOrCreate(port)
+	go httpServer(port)
 
-	httpServer(port)
+	select {
+	case _sig := <-sig:
+		log.Println(fmt.Sprintf("[stop] %v\n", _sig))
+	}
 
 }
 
 func httpServer(port int) {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGKILL)
-
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
@@ -69,11 +66,6 @@ func httpServer(port int) {
 
 	go func() { _ = r.Run(fmt.Sprintf(":%d", port)) }()
 	go openBrowser()
-
-	select {
-	case _sig := <-sig:
-		log.Println(fmt.Sprintf("[stop] %v\n", _sig))
-	}
 }
 
 func openBrowser() {
@@ -100,10 +92,18 @@ func getVhostListOrCreate(localPort int) {
 }
 
 func appOneInstanceCheck() {
-	var err error
-	appRunFile, err = os.OpenFile(appLockFile, os.O_CREATE|os.O_EXCL, 0600)
-	if err != nil {
-		log.Println("程序已运行：" + err.Error())
+	var isRun = make(chan bool, 1)
+	go func() {
+		l, err := net.Listen("tcp", "127.0.0.98:61234")
+		if err != nil {
+			isRun <- false
+		} else {
+			isRun <- true
+		}
+		_, _ = l.Accept()
+	}()
+	if !<-isRun {
 		utils.WaitInputExit()
+		os.Exit(1)
 	}
 }
