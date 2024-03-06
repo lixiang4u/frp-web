@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/denisbrodbeck/machineid"
+	"github.com/fatedier/frp/pkg/util/util"
 	"github.com/lixiang4u/frp-web/utils"
 	"github.com/spf13/viper"
 	"log"
@@ -23,15 +24,18 @@ func init() {
 	log.Println("[MachineId]", machineId)
 	AppMachineId = machineId
 
+	ApiServerHost = util.EmptyOr(strings.TrimRight(viper.GetString("app.server"), "/"), "http://api-frp.lixiang4u.xyz:7200")
+	AppInstance1 = util.EmptyOr(strings.TrimSpace(viper.GetString("app.instance1")), "127.0.0.98:61234")
+
 	viper.SetConfigFile("config.toml")
-	if err := viper.ReadInConfig(); err != nil {
-		log.Println("[configError]", err.Error())
-		utils.WaitInputExit()
-	}
-	if len(viper.GetString("app.server")) == 0 {
+	_ = viper.ReadInConfig()
+
+	if len(ApiServerHost) == 0 {
 		log.Println("[configError] app.server 配置不能为空")
 		utils.WaitInputExit()
 	}
-	ApiServerHost = strings.TrimRight(viper.GetString("app.server"), "/")
-	AppInstance1 = strings.TrimSpace(viper.GetString("app.instance1"))
+	if len(AppInstance1) == 0 {
+		log.Println("[configError] app.instance1 配置不能为空")
+		utils.WaitInputExit()
+	}
 }

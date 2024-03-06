@@ -11,6 +11,7 @@ import (
 	"github.com/lixiang4u/frp-web/utils"
 	"io/fs"
 	"log"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -64,7 +65,9 @@ func httpServer(port int) {
 		MaxAge: 12 * time.Hour,
 	}))
 
-	r.Static(fmt.Sprintf("/%s/", frpWebRoot), filepath.Join("frp-web-h5", "dist"))
+	r.GET("/frp-web", frpWebFileServer)
+	r.GET("/frp-web/*filepath", frpWebFileServer)
+
 	r.GET("/api/config", handler.ApiRecover(handler.ApiAuth(handler.ApiServerConfig)))
 	r.POST("/api/vhost", handler.ApiRecover(handler.ApiAuth(handler.ApiServerCreateVhost)))
 	r.GET("/api/vhosts", handler.ApiRecover(handler.ApiAuth(handler.ApiServerVhostList)))
@@ -140,7 +143,8 @@ func appOneInstanceCheck(port int) {
 }
 
 func apiNotRoute(ctx *gin.Context) {
-	tmpUrl, _ := url.PathUnescape(ctx.Request.RequestURI)
+	u, _ := url.Parse(ctx.Request.RequestURI)
+	tmpUrl := u.Path
 
 	root, _ := filepath.Abs(filepath.Join("."))
 	tmpFile, _ := filepath.Abs(filepath.Join(".", tmpUrl))
@@ -151,22 +155,27 @@ func apiNotRoute(ctx *gin.Context) {
 		return
 	}
 
-	// 从嵌入文件系统查找资源
-	if strings.HasPrefix(strings.TrimLeft(tmpUrl, "/"), frpWebRoot) {
-		var cf = filepath.Join("frp-web-h5", "dist", strings.TrimLeft(tmpUrl, fmt.Sprintf("/%s", frpWebRoot)))
-		cf = strings.ReplaceAll(cf, "\\", "/")
-		_, err = fs.Stat(frpWebContent, cf)
-		if err == nil {
-			ctx.Header("X-File-From", fmt.Sprintf("embed: %s", cf))
-			ctx.Status(http.StatusOK)
-			ctx.FileFromFS(cf, http.FS(frpWebContent))
-			return
-		}
-	}
-
 	ctx.JSON(http.StatusNotFound, gin.H{
 		"code": 404,
 		"msg":  "请求地址错误",
 		"path": tmpUrl,
 	})
+}
+
+func frpWebFileServer(ctx *gin.Context) {
+	var fp = ctx.Param("filepath")
+	if len(fp) == 0 || fp == "/" {
+		fp = "index.html"
+	}
+	var cf = strings.ReplaceAll(filepath.Join("frp-web-h5", "dist", fp), "\\", "/")
+	buf, err := fs.ReadFile(frpWebContent, cf)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"code": 404,
+			"msg":  "请求地址错误(embed.FS)",
+			"path": ctx.Param("filepath"),
+		})
+		return
+	}
+	ctx.Data(http.StatusOK, mime.TypeByExtension(filepath.Ext(cf)), buf)
 }
