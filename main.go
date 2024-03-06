@@ -14,7 +14,6 @@ import (
 	"mime"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -65,8 +64,8 @@ func httpServer(port int) {
 		MaxAge: 12 * time.Hour,
 	}))
 
-	r.GET("/frp-web", frpWebFileServer)
-	r.GET("/frp-web/*filepath", frpWebFileServer)
+	r.GET(fmt.Sprintf("/%s", frpWebRoot), frpWebFileServer)
+	r.GET(fmt.Sprintf("/%s/*filepath", frpWebRoot), frpWebFileServer)
 
 	r.GET("/api/config", handler.ApiRecover(handler.ApiAuth(handler.ApiServerConfig)))
 	r.POST("/api/vhost", handler.ApiRecover(handler.ApiAuth(handler.ApiServerCreateVhost)))
@@ -74,7 +73,7 @@ func httpServer(port int) {
 	r.DELETE("/api/vhost/:vhost_id", handler.ApiRecover(handler.ApiAuth(handler.ApiServerRemoveVhost)))
 	r.POST("/api/frp/reload", handler.ApiRecover(handler.ApiAuth(handler.ApiFrpReload)))
 
-	r.NoRoute(handler.ApiRecover(apiNotRoute))
+	r.NoRoute(handler.ApiRecover(handler.ApiNotRoute))
 
 	go func() { _ = r.Run(fmt.Sprintf(":%d", port)) }()
 	go openBrowser(port)
@@ -140,26 +139,6 @@ func appOneInstanceCheck(port int) {
 		os.Exit(1)
 	}
 
-}
-
-func apiNotRoute(ctx *gin.Context) {
-	u, _ := url.Parse(ctx.Request.RequestURI)
-	tmpUrl := u.Path
-
-	root, _ := filepath.Abs(filepath.Join("."))
-	tmpFile, _ := filepath.Abs(filepath.Join(".", tmpUrl))
-	_, err := os.Stat(tmpFile)
-	if err == nil && strings.HasPrefix(tmpFile, root) {
-		ctx.Status(http.StatusOK)
-		ctx.File(tmpFile)
-		return
-	}
-
-	ctx.JSON(http.StatusNotFound, gin.H{
-		"code": 404,
-		"msg":  "请求地址错误",
-		"path": tmpUrl,
-	})
 }
 
 func frpWebFileServer(ctx *gin.Context) {
