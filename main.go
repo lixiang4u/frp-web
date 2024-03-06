@@ -96,11 +96,12 @@ func appOneInstanceCheck() {
 	go func() {
 		l, err := net.Listen("tcp", "127.0.0.98:61234")
 		if err != nil {
+			log.Println("[程序使用(tcp://127.0.0.98:61234)检测多开问题]", err.Error())
 			isRun <- false
 		} else {
+			go func() { _, _ = l.Accept() }()
 			isRun <- true
 		}
-		_, _ = l.Accept()
 	}()
 	if !<-isRun {
 		utils.WaitInputExit()
