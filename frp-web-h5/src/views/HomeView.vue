@@ -246,6 +246,7 @@ const onClickConnectServer = () => {
 const onClickVhostSave = () => {
   formProxyConfigRef.value?.validate(errors => {
     api.newVhost({
+      id: formProxyConfigValue.value.id,
       type: formProxyConfigValue.value.type,
       local_addr: formProxyConfigValue.value.local_addr,
       name: formProxyConfigValue.value.name,
@@ -340,6 +341,7 @@ const formServerConfigRules = {
 
 const formProxyConfigRef = ref()
 const formProxyConfigValue = ref({
+  id: null,
   type: null,
   name: null,
   custom_domain: null,
@@ -536,7 +538,7 @@ export default defineComponent({
   line-height: 200%;
 }
 
-.grey{
+.grey {
   color: #c3c3c3;
 }
 
