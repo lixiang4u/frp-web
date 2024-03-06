@@ -158,8 +158,10 @@ func ApiFrpReload(ctx *gin.Context) {
 }
 
 func ApiNotRoute(ctx *gin.Context) {
+	tmpUrl, _ := url.PathUnescape(ctx.Request.RequestURI)
+
 	root, _ := filepath.Abs(filepath.Join("."))
-	tmpFile, _ := filepath.Abs(filepath.Join(".", ctx.Request.RequestURI))
+	tmpFile, _ := filepath.Abs(filepath.Join(".", tmpUrl))
 	_, err := os.Stat(tmpFile)
 	if err == nil && strings.HasPrefix(tmpFile, root) {
 		ctx.Status(http.StatusOK)
@@ -170,7 +172,7 @@ func ApiNotRoute(ctx *gin.Context) {
 	ctx.JSON(http.StatusNotFound, gin.H{
 		"code": 404,
 		"msg":  "请求地址错误",
-		"path": ctx.Request.RequestURI,
+		"path": tmpUrl,
 	})
 }
 
