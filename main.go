@@ -59,13 +59,13 @@ func httpServer(port int) {
 	}))
 
 	r.Static(fmt.Sprintf("/%s/", frpWebRoot), filepath.Join("frp-web-h5", "dist"))
-	r.GET("/api/config", handler.ApiServerConfig)
-	r.POST("/api/vhost", handler.ApiServerCreateVhost)
-	r.GET("/api/vhosts", handler.ApiServerVhostList)
-	r.DELETE("/api/vhost/:vhost_id", handler.ApiServerRemoveVhost)
-	r.POST("/api/frp/reload", handler.ApiFrpReload)
+	r.GET("/api/config", handler.ApiRecover(handler.ApiAuth(handler.ApiServerConfig)))
+	r.POST("/api/vhost", handler.ApiRecover(handler.ApiAuth(handler.ApiServerCreateVhost)))
+	r.GET("/api/vhosts", handler.ApiRecover(handler.ApiAuth(handler.ApiServerVhostList)))
+	r.DELETE("/api/vhost/:vhost_id", handler.ApiRecover(handler.ApiAuth(handler.ApiServerRemoveVhost)))
+	r.POST("/api/frp/reload", handler.ApiRecover(handler.ApiAuth(handler.ApiFrpReload)))
 
-	r.NoRoute(handler.ApiNotRoute)
+	r.NoRoute(handler.ApiRecover(handler.ApiNotRoute))
 
 	go func() { _ = r.Run(fmt.Sprintf(":%d", port)) }()
 	go openBrowser(port)

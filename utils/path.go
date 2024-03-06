@@ -2,8 +2,10 @@ package utils
 
 import (
 	"io/fs"
+	"net"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func AppPath() string {
@@ -19,4 +21,22 @@ func AppTempFile(elem ...string) string {
 	var tmpFile = filepath.Join(elem...)
 	_ = os.MkdirAll(filepath.Dir(tmpFile), fs.ModePerm)
 	return tmpFile
+}
+
+func IsIntranet(address string) (bool, error) {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		host = address
+	}
+	ipAddr, err := net.ResolveIPAddr("ip", host)
+	if err != nil {
+		return true, err
+	}
+	ip := ipAddr.IP
+	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return true, nil
+	} else if strings.HasSuffix(host, ".local") {
+		return true, nil
+	}
+	return false, nil
 }

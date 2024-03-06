@@ -20,6 +20,41 @@ import (
 	"strings"
 )
 
+func ApiRecover(h gin.HandlerFunc) gin.HandlerFunc {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("[recover]", err)
+		}
+	}()
+
+	return func(ctx *gin.Context) {
+		h(ctx)
+	}
+}
+
+func ApiAuth(h gin.HandlerFunc) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		ok, err := utils.IsIntranet(ctx.Request.Host)
+		if err != nil {
+			ctx.JSON(http.StatusOK, gin.H{
+				"code":  http.StatusInternalServerError,
+				"msg":   "请求来源异常",
+				"debug": err.Error(),
+			})
+			return
+		}
+		if !ok {
+			ctx.JSON(http.StatusOK, gin.H{
+				"code":  http.StatusInternalServerError,
+				"msg":   "请求来源异常，该请求只能内网访问",
+				"debug": ctx.Request.Host,
+			})
+			return
+		}
+		h(ctx)
+	}
+}
+
 func ApiServerConfig(ctx *gin.Context) {
 	code, buf, _ := utils.HttpGet(fmt.Sprintf("%s/api/config", model.ApiServerHost))
 
@@ -42,6 +77,7 @@ func ApiServerVhostList(ctx *gin.Context) {
 
 func ApiServerCreateVhost(ctx *gin.Context) {
 	type Req struct {
+		Id        string `json:"id" form:"id"`
 		Type      string `json:"type" form:"type"`
 		LocalAddr string `json:"local_addr" form:"local_addr"`
 		Name      string `json:"name" form:"name"` // 代码名称
@@ -50,6 +86,7 @@ func ApiServerCreateVhost(ctx *gin.Context) {
 	_ = ctx.ShouldBind(&req)
 
 	var body = utils.ToJsonString(gin.H{
+		"id":         req.Id,
 		"type":       req.Type,
 		"machine_id": model.AppMachineId,
 		"local_addr": req.LocalAddr,
