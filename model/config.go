@@ -38,4 +38,9 @@ func init() {
 		log.Println("[configError] app.instance1 配置不能为空")
 		utils.WaitInputExit()
 	}
+
+	// 重新设置并写入配置
+	viper.Set("app.server", ApiServerHost)
+	viper.Set("app.instance1", AppInstance1)
+	_ = viper.WriteConfig()
 }
