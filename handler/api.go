@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -192,25 +191,6 @@ func ApiFrpReload(ctx *gin.Context) {
 	}()
 
 	ctx.JSON(http.StatusOK, resp)
-}
-
-func ApiNotRoute(ctx *gin.Context) {
-	tmpUrl, _ := url.PathUnescape(ctx.Request.RequestURI)
-
-	root, _ := filepath.Abs(filepath.Join("."))
-	tmpFile, _ := filepath.Abs(filepath.Join(".", tmpUrl))
-	_, err := os.Stat(tmpFile)
-	if err == nil && strings.HasPrefix(tmpFile, root) {
-		ctx.Status(http.StatusOK)
-		ctx.File(tmpFile)
-		return
-	}
-
-	ctx.JSON(http.StatusNotFound, gin.H{
-		"code": 404,
-		"msg":  "请求地址错误",
-		"path": tmpUrl,
-	})
 }
 
 func handlerVhostConfig(vhosts []model.Vhost) []v1.ProxyConfigurer {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"github.com/gin-contrib/cors"
@@ -11,6 +12,8 @@ import (
 	"io/fs"
 	"log"
 	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -20,6 +23,9 @@ import (
 	"syscall"
 	"time"
 )
+
+//go:embed frp-web-h5/dist/*
+var frpWebContent embed.FS
 
 var (
 	frpWebRoot      = "frp-web" // 同 frp-web-h5/vite.config.js 中 base 值
@@ -65,7 +71,7 @@ func httpServer(port int) {
 	r.DELETE("/api/vhost/:vhost_id", handler.ApiRecover(handler.ApiAuth(handler.ApiServerRemoveVhost)))
 	r.POST("/api/frp/reload", handler.ApiRecover(handler.ApiAuth(handler.ApiFrpReload)))
 
-	r.NoRoute(handler.ApiRecover(handler.ApiNotRoute))
+	r.NoRoute(handler.ApiRecover(apiNotRoute))
 
 	go func() { _ = r.Run(fmt.Sprintf(":%d", port)) }()
 	go openBrowser(port)
@@ -131,4 +137,36 @@ func appOneInstanceCheck(port int) {
 		os.Exit(1)
 	}
 
+}
+
+func apiNotRoute(ctx *gin.Context) {
+	tmpUrl, _ := url.PathUnescape(ctx.Request.RequestURI)
+
+	root, _ := filepath.Abs(filepath.Join("."))
+	tmpFile, _ := filepath.Abs(filepath.Join(".", tmpUrl))
+	_, err := os.Stat(tmpFile)
+	if err == nil && strings.HasPrefix(tmpFile, root) {
+		ctx.Status(http.StatusOK)
+		ctx.File(tmpFile)
+		return
+	}
+
+	// 从嵌入文件系统查找资源
+	if strings.HasPrefix(strings.TrimLeft(tmpUrl, "/"), frpWebRoot) {
+		var cf = filepath.Join("frp-web-h5", "dist", strings.TrimLeft(tmpUrl, fmt.Sprintf("/%s", frpWebRoot)))
+		cf = strings.ReplaceAll(cf, "\\", "/")
+		_, err = fs.Stat(frpWebContent, cf)
+		if err == nil {
+			ctx.Header("X-File-From", fmt.Sprintf("embed: %s", cf))
+			ctx.Status(http.StatusOK)
+			ctx.FileFromFS(cf, http.FS(frpWebContent))
+			return
+		}
+	}
+
+	ctx.JSON(http.StatusNotFound, gin.H{
+		"code": 404,
+		"msg":  "请求地址错误",
+		"path": tmpUrl,
+	})
 }
