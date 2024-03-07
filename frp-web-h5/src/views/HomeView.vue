@@ -1,7 +1,7 @@
 <template>
   <div class="page">
 
-    <n-divider title-placement="left"><h2>1、配置服务器</h2></n-divider>
+    <n-divider title-placement="left"><h2>1、配置服务器(frps)</h2></n-divider>
     <n-form
         class="plr40"
         ref="formServerConfigRef"
@@ -11,7 +11,7 @@
         :rules="formServerConfigRules">
 
       <n-grid :cols="24" :x-gap="24">
-        <n-form-item-gi :span="6" label="服务器地址" path="host">
+        <n-form-item-gi :span="8" label="服务器地址" path="host">
           <n-input v-model:value="formServerConfigValue.host" placeholder="请输入服务器地址" :attr-size="45"/>
         </n-form-item-gi>
         <n-form-item-gi :span="4" label="服务器端口" path="bind_port">
@@ -33,9 +33,9 @@
                    placeholder="请输入vhost端口(https)"
                    :attr-size="16"/>
         </n-form-item-gi>
-        <n-form-item-gi :span="2">
-          <n-button :disabled="formServerConfigDisabled" @click="onClickConnectServer" type="primary">连接</n-button>
-        </n-form-item-gi>
+<!--        <n-form-item-gi :span="2">-->
+<!--          <n-button :disabled="formServerConfigDisabled" @click="onClickConnectServer" type="primary">连接</n-button>-->
+<!--        </n-form-item-gi>-->
 
       </n-grid>
 
