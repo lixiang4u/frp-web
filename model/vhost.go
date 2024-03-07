@@ -6,6 +6,7 @@ type Vhost struct {
 	Name         string `json:"name"`
 	CustomDomain string `json:"custom_domain"`
 	LocalAddr    string `json:"local_addr"`
+	RemotePort   int    `json:"remote_port"`
 	CrtPath      string `json:"crt_path"`
 	KeyPath      string `json:"key_path"`
 }

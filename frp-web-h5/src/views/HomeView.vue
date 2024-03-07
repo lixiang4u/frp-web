@@ -11,7 +11,7 @@
         :rules="formServerConfigRules">
 
       <n-grid :cols="24" :x-gap="24">
-        <n-form-item-gi :span="10" label="服务器地址" path="host">
+        <n-form-item-gi :span="6" label="服务器地址" path="host">
           <n-input v-model:value="formServerConfigValue.host" placeholder="请输入服务器地址" :attr-size="45"/>
         </n-form-item-gi>
         <n-form-item-gi :span="4" label="服务器端口" path="bind_port">
@@ -25,6 +25,11 @@
         </n-form-item-gi>
         <n-form-item-gi :span="4" label="vhost端口(https)" path="vhost_https_port">
           <n-input v-model:value="formServerConfigValue.vhost_https_port" type="number"
+                   placeholder="请输入vhost端口(https)"
+                   :attr-size="16"/>
+        </n-form-item-gi>
+        <n-form-item-gi :span="4" label="tcpmux端口(tcpmux)" path="tcp_mux_http_connect_port">
+          <n-input v-model:value="formServerConfigValue.tcp_mux_http_connect_port" type="number"
                    placeholder="请输入vhost端口(https)"
                    :attr-size="16"/>
         </n-form-item-gi>
@@ -60,7 +65,7 @@
       </div>
     </div>
 
-    <n-modal v-model:show="showModalCreateVhost" preset="dialog" style="width: auto">
+    <n-modal v-model:show="showModalCreateVhost" preset="dialog" style="width: 880px">
       <template #header>
         <div>添加/修改配置</div>
       </template>
@@ -77,30 +82,68 @@
                   v-model:value="formProxyConfigValue.type"
                   :options="proxyTypeOptions"
                   placeholder="请选择代理类型"
+                  @updateValue="onChangeProxyType"
                   clearable
                   filterable/>
             </n-form-item-gi>
-            <n-form-item-gi :span="12" label="代理名称" path="name">
+            <n-form-item-gi
+                :span="12"
+                label="代理名称"
+                path="name"
+            >
               <n-input v-model:value="formProxyConfigValue.name" placeholder="请输入代理名称" :attr-size="16"/>
             </n-form-item-gi>
 
-            <n-form-item-gi :span="12" label="本地地址" path="local_addr">
-              <n-input v-model:value="formProxyConfigValue.local_addr" placeholder="请输入本地地址"
+            <n-form-item-gi
+                :span="12"
+                label="本地地址"
+                path="local_addr"
+            >
+              <n-input v-model:value="formProxyConfigValue.local_addr" placeholder="请输入本地地址（只支持ip:port格式）"
                        :attr-size="16"/>
             </n-form-item-gi>
-            <n-form-item-gi :span="12" label="公网域名" path="custom_domain">
+
+            <n-form-item-gi
+                :span="12"
+                label="服务器端口(服务器端口会被独占)"
+                path="remote_port"
+                v-if="['tcp','tcpmux'].includes(formProxyConfigValue.type)"
+            >
+              <n-input v-model:value="formProxyConfigValue.remote_port"
+                       placeholder="请输入服务器端口"
+                       :disabled="formProxyConfigValue.custom_domain"
+                       :attr-size="16"/>
+            </n-form-item-gi>
+
+            <n-form-item-gi
+                :span="12"
+                label="公网域名"
+                path="custom_domain"
+                v-if="proxyTypeOptions.map(item=>item.value).includes(formProxyConfigValue.type)"
+            >
               <n-input disabled v-model:value="formProxyConfigValue.custom_domain" placeholder="请输入公网域名"
                        :attr-size="45"/>
             </n-form-item-gi>
 
-            <n-form-item-gi :span="12" label="证书文件(https)" path="crt_path">
+            <n-form-item-gi
+                :span="12"
+                label="证书文件(https)"
+                path="crt_path"
+                v-if="['http','https'].includes(formProxyConfigValue.type)"
+            >
               <n-input disabled v-model:value="formProxyConfigValue.crt_path" placeholder="请输入证书文件(https)"
                        :attr-size="16"/>
             </n-form-item-gi>
-            <n-form-item-gi :span="12" label="证书密钥(https)" path="key_path">
+            <n-form-item-gi
+                :span="12"
+                label="证书密钥(https)"
+                path="key_path"
+                v-if="['http','https'].includes(formProxyConfigValue.type)"
+            >
               <n-input disabled v-model:value="formProxyConfigValue.key_path" placeholder="请输入证书密钥(https)"
                        :attr-size="16"/>
             </n-form-item-gi>
+
           </n-grid>
         </n-form>
       </div>
@@ -163,11 +206,18 @@ const createVhostColumns = () => {
       key: "custom_domain",
       resizable: true,
       render(row) {
-        const tmpUrl = `${row.type}://${row.custom_domain}`
-        return [
-          h('div', {class: 'lh150'}, h('a', {href: tmpUrl, target: '_blank'}, tmpUrl)),
-          // h('div', {class: 'lh150'}, h('a', {href: `${tmpUrl}/files/`, target: '_blank'}, `${tmpUrl}/files/`)),
-        ]
+        if (['tcp', 'tcpmux'].includes(row.type)) {
+          const tmpUrl = `${row.custom_domain}:${row.remote_port}`
+          return [
+            h('div', {class: 'lh150'}, h('a', {}, tmpUrl)),
+          ]
+        } else {
+          const tmpUrl = `${row.type}://${row.custom_domain}`
+          return [
+            h('div', {class: 'lh150'}, h('a', {href: tmpUrl, target: '_blank'}, tmpUrl)),
+            // h('div', {class: 'lh150'}, h('a', {href: `${tmpUrl}/files/`, target: '_blank'}, `${tmpUrl}/files/`)),
+          ]
+        }
       },
     },
     {
@@ -175,11 +225,19 @@ const createVhostColumns = () => {
       key: "local_addr",
       resizable: true,
       render(row) {
-        const tmpUrl = `${row.type}://${row.local_addr}`
-        return [
-          h('div', {class: 'lh150'}, h('a', {href: tmpUrl, target: '_blank'}, tmpUrl)),
-          // h('div', {class: 'lh150'}, h('a', {href: `${tmpUrl}/files/`, target: '_blank'}, `${tmpUrl}/files/`)),
-        ]
+        if (['tcp', 'tcpmux'].includes(row.type)) {
+          const tmpUrl = row.local_addr
+          return [
+            h('div', {class: 'lh150'}, h('a', {}, tmpUrl)),
+          ]
+
+        } else {
+          const tmpUrl = `${row.type}://${row.local_addr}`
+          return [
+            h('div', {class: 'lh150'}, h('a', {href: tmpUrl, target: '_blank'}, tmpUrl)),
+            // h('div', {class: 'lh150'}, h('a', {href: `${tmpUrl}/files/`, target: '_blank'}, `${tmpUrl}/files/`)),
+          ]
+        }
       },
     },
     {
@@ -231,25 +289,53 @@ const vhostColumns = createVhostColumns()
 
 const proxyTypeOptions = ref([
   {
-    label: "代理本地到http",
+    label: "代理本地http",
     value: 'http',
+    default_local_addr: '127.0.0.1:8000',
+    default_remote_port: '',
   },
   {
-    label: '代理本地到https',
-    value: 'https'
+    label: '代理本地https',
+    value: 'https',
+    default_local_addr: '127.0.0.1:8000',
+    default_remote_port: '',
+  },
+  {
+    label: '代理本地tcp(适用ssh)',
+    value: 'tcp',
+    default_local_addr: '127.0.0.1:22',
+  },
+  {
+    label: '代理本地tcp(mux)(只适用httpconnect)',
+    value: 'tcpmux',
+    default_local_addr: '127.0.0.1:6000',
   }
 ])
+
+const onChangeProxyType = (v) => {
+  const find = proxyTypeOptions.value.find(item => {
+    return item.value === v
+  })
+  formProxyConfigValue.value.local_addr = find.default_local_addr
+  formProxyConfigValue.value.remote_port = formServerConfigValue.value.tcp_mux_http_connect_port
+
+}
 
 const onClickConnectServer = () => {
 }
 
 const onClickVhostSave = () => {
   formProxyConfigRef.value?.validate(errors => {
+    if (errors) {
+      console.log('[errors]', errors)
+      return
+    }
     api.newVhost({
       id: formProxyConfigValue.value.id,
       type: formProxyConfigValue.value.type,
-      local_addr: formProxyConfigValue.value.local_addr,
       name: formProxyConfigValue.value.name,
+      local_addr: formProxyConfigValue.value.local_addr,
+      remote_port: +formProxyConfigValue.value.remote_port,
     }).then(resp => {
       console.log('[newVhost-resp]', resp)
 
@@ -299,14 +385,22 @@ const formProxyConfigRules = {
   type: {
     required: true,
     message: "请选择类型",
+    trigger: ['blur', 'change'],
   },
   name: {
     required: true,
     message: "请输入名称",
+    trigger: ['blur', 'change'],
   },
   local_addr: {
     required: true,
     message: "请输入本地地址",
+    trigger: ['blur', 'change'],
+  },
+  remote_port: {
+    required: true,
+    message: "请输入服务器端口",
+    trigger: ['blur', 'change'],
   },
 }
 
@@ -315,6 +409,7 @@ const formServerConfigValue = ref({
   bind_port: "",
   vhost_http_port: "",
   vhost_https_port: "",
+  tcp_mux_http_connect_port: "",
 })
 
 const formServerConfigRules = {
@@ -339,8 +434,7 @@ const formServerConfigRules = {
   },
 }
 
-const formProxyConfigRef = ref()
-const formProxyConfigValue = ref({
+const defaultProxyConfig = {
   id: null,
   type: null,
   name: null,
@@ -348,22 +442,16 @@ const formProxyConfigValue = ref({
   custom_domains: [],
   local_port: null,
   local_addr: null,
+  remote_port: null,
   crt_path: null,
   key_path: null,
-})
+}
+
+const formProxyConfigRef = ref(null)
+const formProxyConfigValue = ref(Object.assign({}, defaultProxyConfig))
 
 const clearFormProxyConfigValue = () => {
-  formProxyConfigValue.value = {
-    id: null,
-    type: null,
-    name: null,
-    custom_domain: null,
-    custom_domains: [],
-    local_port: null,
-    local_addr: null,
-    crt_path: null,
-    key_path: null,
-  }
+  formProxyConfigValue.value = Object.assign({}, defaultProxyConfig)
 }
 
 const onBeforeMountHandler = () => {
@@ -371,6 +459,7 @@ const onBeforeMountHandler = () => {
     resp.data.config.bind_port = '' + resp.data.config.bind_port
     resp.data.config.vhost_http_port = '' + resp.data.config.vhost_http_port
     resp.data.config.vhost_https_port = '' + resp.data.config.vhost_https_port
+    resp.data.config.tcp_mux_http_connect_port = '' + resp.data.config.tcp_mux_http_connect_port
     formServerConfigValue.value = resp.data.config
     formServerConfigDisabled.value = true
     console.log('[getConfig-resp]', resp)
@@ -474,6 +563,7 @@ export default defineComponent({
       formProxyConfigValue,
       modalTipsRef,
       modalWaitingRef,
+      onChangeProxyType,
     };
   }
 });

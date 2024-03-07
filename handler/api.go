@@ -77,20 +77,22 @@ func ApiServerVhostList(ctx *gin.Context) {
 
 func ApiServerCreateVhost(ctx *gin.Context) {
 	type Req struct {
-		Id        string `json:"id" form:"id"`
-		Type      string `json:"type" form:"type"`
-		LocalAddr string `json:"local_addr" form:"local_addr"`
-		Name      string `json:"name" form:"name"` // 代码名称
+		Id         string `json:"id" form:"id"`
+		Type       string `json:"type" form:"type"`
+		LocalAddr  string `json:"local_addr" form:"local_addr"`
+		RemotePort int    `json:"remote_port" form:"remote_port"`
+		Name       string `json:"name" form:"name"` // 代码名称
 	}
 	var req Req
 	_ = ctx.ShouldBind(&req)
 
 	var body = utils.ToJsonString(gin.H{
-		"id":         req.Id,
-		"type":       req.Type,
-		"machine_id": model.AppMachineId,
-		"local_addr": req.LocalAddr,
-		"name":       req.Name,
+		"id":          req.Id,
+		"type":        req.Type,
+		"machine_id":  model.AppMachineId,
+		"local_addr":  req.LocalAddr,
+		"remote_port": req.RemotePort,
+		"name":        req.Name,
 	})
 	code, buf, _ := utils.HttpPost(fmt.Sprintf("%s/api/vhost", model.ApiServerHost), []byte(body))
 
@@ -217,7 +219,10 @@ func handlerVhostConfig(vhosts []model.Vhost) []v1.ProxyConfigurer {
 	var proxyCfgs = make([]v1.ProxyConfigurer, 0)
 	for _, vhost := range vhosts {
 		pc := v1.NewProxyConfigurerByType(v1.ProxyType(vhost.Type))
-		proxyCfgs = append(proxyCfgs, handlerVhostConfigTyped(pc, vhost))
+		tmpTypedConfig := handlerVhostConfigTyped(pc, vhost)
+		if tmpTypedConfig != nil {
+			proxyCfgs = append(proxyCfgs, tmpTypedConfig)
+		}
 	}
 	return proxyCfgs
 }
@@ -264,6 +269,30 @@ func handlerVhostConfigTyped(pc v1.ProxyConfigurer, vhost model.Vhost) (proxyCfg
 		}
 
 		proxyCfg = tmpC
+	case *v1.TCPProxyConfig:
+		tmpC.Name = vhost.Name
+		tmpC.Transport.BandwidthLimitMode = "client"
+
+		tmpC.LocalIP = host
+		tmpC.LocalPort = utils.StringToInt(port)
+
+		tmpC.RemotePort = vhost.RemotePort
+
+		proxyCfg = tmpC
+	case *v1.TCPMuxProxyConfig:
+		tmpC.Name = vhost.Name
+		tmpC.Transport.BandwidthLimitMode = "client"
+
+		tmpC.LocalIP = host
+		tmpC.LocalPort = utils.StringToInt(port)
+
+		tmpC.CustomDomains = make([]string, 0)
+		tmpC.CustomDomains = append(tmpC.CustomDomains, vhost.CustomDomain)
+
+		tmpC.Multiplexer = "httpconnect"
+
+		proxyCfg = tmpC
+
 	default:
 
 	}
@@ -326,6 +355,9 @@ func runFrpClient(serverAddr string, serverPort int, vhosts []model.Vhost) (err 
 
 	var proxyCfgs = handlerVhostConfig(vhosts)
 	var visitorCfgs = make([]v1.VisitorConfigurer, 0)
+	log.Println("[==================>vhosts]", utils.ToJsonString(vhosts))
+	log.Println("[==================>cfg]", utils.ToJsonString(cfg))
+	log.Println("[==================>proxyCfgs1]", utils.ToJsonString(proxyCfgs))
 
 	utils.FrpCloseRecover(svr)
 
@@ -344,6 +376,7 @@ func runFrpClient(serverAddr string, serverPort int, vhosts []model.Vhost) (err 
 	if shouldGracefulClose {
 		go utils.FrpTermSignal(svr)
 	}
+	log.Println("[==================>proxyCfgs2]", utils.ToJsonString(proxyCfgs))
 	err = svr.Run(context.Background())
 	if err != nil {
 		log.Println("[frpRunError]", err.Error())
