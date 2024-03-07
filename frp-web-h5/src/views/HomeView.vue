@@ -305,12 +305,12 @@ const proxyTypeOptions = ref([
     default_remote_port: '',
   },
   {
-    label: '代理本地tcp(适用ssh)',
+    label: '代理本地tcp(适用ssh/mysql...)(24h后自动释放)',
     value: 'tcp',
     default_local_addr: '127.0.0.1:22',
   },
   {
-    label: '代理本地tcp(mux)(只适用httpconnect)',
+    label: '代理本地tcp(mux)(只适用httpconnect/不推荐)',
     value: 'tcpmux',
     default_local_addr: '127.0.0.1:6000',
   }
