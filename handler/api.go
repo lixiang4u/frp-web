@@ -364,9 +364,6 @@ func runFrpClient(serverAddr string, serverPort int, vhosts []model.Vhost) (err 
 
 	var proxyCfgs = handlerVhostConfig(vhosts)
 	var visitorCfgs = make([]v1.VisitorConfigurer, 0)
-	log.Println("[==================>vhosts]", utils.ToJsonString(vhosts))
-	log.Println("[==================>cfg]", utils.ToJsonString(cfg))
-	log.Println("[==================>proxyCfgs1]", utils.ToJsonString(proxyCfgs))
 
 	utils.FrpCloseRecover(svr)
 
@@ -385,7 +382,6 @@ func runFrpClient(serverAddr string, serverPort int, vhosts []model.Vhost) (err 
 	if shouldGracefulClose {
 		go utils.FrpTermSignal(svr)
 	}
-	log.Println("[==================>proxyCfgs2]", utils.ToJsonString(proxyCfgs))
 	err = svr.Run(context.Background())
 	if err != nil {
 		log.Println("[frpRunError]", err.Error())
