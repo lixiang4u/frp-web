@@ -61,6 +61,8 @@ func ApiServerConfig(ctx *gin.Context) {
 	var resp gin.H
 	_ = json.Unmarshal(buf, &resp)
 
+	resp["machine_id"] = model.AppMachineId
+
 	ctx.JSON(code, resp)
 }
 

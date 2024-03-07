@@ -57,13 +57,17 @@
     </div>
 
     <div class="ptb20"></div>
-    <div class="ptb20"></div>
 
-    <div class="plr40">
-      <div class="grey">
+    <div class="plr40 grey lh180">
+      <span>
         更新地址：<a class="grey" href="https://github.com/lixiang4u/frp-web/releases/">frp-web</a>
-      </div>
+      </span>
+      &vert;
+      <span>
+        设备ID：{{ formServerConfigValue.machine_id }}
+      </span>
     </div>
+
 
     <n-modal v-model:show="showModalCreateVhost" preset="dialog" style="width: 880px">
       <template #header>
@@ -424,6 +428,7 @@ const formServerConfigValue = ref({
   tcp_mux_http_connect_port: "",
   max_use_port: 0,
   min_use_port: 0,
+  machine_id: '',
 })
 
 const formServerConfigRules = {
@@ -475,6 +480,8 @@ const onBeforeMountHandler = () => {
     resp.data.config.vhost_https_port = '' + resp.data.config.vhost_https_port
     resp.data.config.tcp_mux_http_connect_port = '' + resp.data.config.tcp_mux_http_connect_port
     formServerConfigValue.value = resp.data.config
+    formServerConfigValue.value.machine_id = resp.data.machine_id
+
     formServerConfigDisabled.value = true
     console.log('[getConfig-resp]', resp)
 
@@ -590,6 +597,13 @@ export default defineComponent({
   margin: 20px auto;
 }
 
+:deep(input[type=text]),
+:deep(input[type=number]),
+:deep(.n-form-item-label__text),
+.page {
+  font-family: "Source Code Pro", Arial, sans-serif;
+}
+
 .plr40 {
   padding: 0 40px;
 }
@@ -636,6 +650,10 @@ export default defineComponent({
 .btn-left {
   margin: 20px 0;
   display: flex;
+}
+
+.lh180 {
+  line-height: 180%;
 }
 
 :deep(.lh150) {
