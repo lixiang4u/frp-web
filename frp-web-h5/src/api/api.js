@@ -26,5 +26,10 @@ export default {
             `/api/frp/reload`
         )
     },
+    getUsePort: () => {
+        return request.post(
+            `/api/use-port-check`
+        )
+    },
 
 }

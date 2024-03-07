@@ -154,6 +154,15 @@ func ApiServerRemoveVhost(ctx *gin.Context) {
 	ctx.JSON(code, resp)
 }
 
+func ApiUsePortCheck(ctx *gin.Context) {
+	code, buf, _ := utils.HttpPost(fmt.Sprintf("%s/api/use-port-check", model.ApiServerHost), nil)
+
+	var resp gin.H
+	_ = json.Unmarshal(buf, &resp)
+
+	ctx.JSON(code, resp)
+}
+
 func ApiFrpReload(ctx *gin.Context) {
 	_, buf, _ := utils.HttpGet(fmt.Sprintf("%s/api/config", model.ApiServerHost))
 

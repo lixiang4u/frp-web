@@ -72,6 +72,7 @@ func httpServer(port int) {
 	r.GET("/api/vhosts", handler.ApiRecover(handler.ApiAuth(handler.ApiServerVhostList)))
 	r.DELETE("/api/vhost/:vhost_id", handler.ApiRecover(handler.ApiAuth(handler.ApiServerRemoveVhost)))
 	r.POST("/api/frp/reload", handler.ApiRecover(handler.ApiAuth(handler.ApiFrpReload)))
+	r.POST("/api/use-port-check", handler.ApiRecover(handler.ApiAuth(handler.ApiUsePortCheck)))
 
 	r.NoRoute(handler.ApiRecover(handler.ApiNotRoute))
 

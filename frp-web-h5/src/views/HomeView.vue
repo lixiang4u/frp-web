@@ -105,12 +105,12 @@
 
             <n-form-item-gi
                 :span="12"
-                label="服务器端口(服务器端口会被独占)"
+                :label="'服务器端口，范围['+formServerConfigValue.min_use_port+'-'+formServerConfigValue.max_use_port+']'"
                 path="remote_port"
                 v-if="['tcp','tcpmux'].includes(formProxyConfigValue.type)"
             >
               <n-input v-model:value="formProxyConfigValue.remote_port"
-                       placeholder="请输入服务器端口"
+                       placeholder="请输入服务器端口（服务器端口会被独占）"
                        :disabled="formProxyConfigValue.custom_domain"
                        :attr-size="16"/>
             </n-form-item-gi>
@@ -318,7 +318,19 @@ const onChangeProxyType = (v) => {
   })
   formProxyConfigValue.value.local_addr = find.default_local_addr
   formProxyConfigValue.value.remote_port = formServerConfigValue.value.tcp_mux_http_connect_port
+  if (find.value === 'tcp') {
+    getUsePort()
+  }
+}
 
+const getUsePort = () => {
+  api.getUsePort().then(resp => {
+    console.log('[getUsePort-resp]', resp)
+    formProxyConfigValue.value.remote_port = resp.data.port
+  }).catch(err => {
+    console.log('[getUsePort-err]', err)
+    formProxyConfigValue.value.remote_port = null
+  })
 }
 
 const onClickConnectServer = () => {
@@ -410,6 +422,8 @@ const formServerConfigValue = ref({
   vhost_http_port: "",
   vhost_https_port: "",
   tcp_mux_http_connect_port: "",
+  max_use_port: 0,
+  min_use_port: 0,
 })
 
 const formServerConfigRules = {
