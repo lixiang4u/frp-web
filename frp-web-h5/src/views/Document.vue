@@ -6,6 +6,7 @@
       <li>支持https代理</li>
       <li>支持tcp代理（SSH/MySQL/Redis...）</li>
       <li>支持自定义域名（需要备案 -> DNS设置cname -> frp-api后台配置 -> frp-web更新vhost -> 使用）</li>
+      <li>支持自定义域名（https需要自定义证书，默认证书不能使用）</li>
       <li>...</li>
     </ul>
 
