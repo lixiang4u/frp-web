@@ -206,7 +206,16 @@ const createVhostColumns = () => {
     {
       title: "类型",
       key: "type",
-      resizable: true,
+      render(row) {
+        return h(
+            NTag,
+            {
+              bordered: false,
+              type: 'success',
+            },
+            {default: () => row.type,}
+        )
+      }
     },
     {
       title: "名称",
