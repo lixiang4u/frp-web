@@ -112,7 +112,7 @@ func appOneInstanceCheck(port int) {
 		}
 		l, err := net.Listen("tcp", model.AppInstance1)
 		if err != nil {
-			log.Println("[程序使用(tcp://127.0.0.98:61234)检测多开问题]", err.Error())
+			log.Println("[程序使用(tcp://127.0.0.1:61234)检测多开问题]", err.Error())
 
 			// 如果启动了则打开网页
 			var ls = model.LocalServer{}

@@ -33,9 +33,9 @@
                    placeholder="请输入vhost端口(https)"
                    :attr-size="16"/>
         </n-form-item-gi>
-<!--        <n-form-item-gi :span="2">-->
-<!--          <n-button :disabled="formServerConfigDisabled" @click="onClickConnectServer" type="primary">连接</n-button>-->
-<!--        </n-form-item-gi>-->
+        <!--        <n-form-item-gi :span="2">-->
+        <!--          <n-button :disabled="formServerConfigDisabled" @click="onClickConnectServer" type="primary">连接</n-button>-->
+        <!--        </n-form-item-gi>-->
 
       </n-grid>
 
@@ -321,7 +321,7 @@ const onChangeProxyType = (v) => {
     return item.value === v
   })
   formProxyConfigValue.value.local_addr = find.default_local_addr
-  formProxyConfigValue.value.remote_port = formServerConfigValue.value.tcp_mux_http_connect_port
+  formProxyConfigValue.value.remote_port = '' + formServerConfigValue.value.tcp_mux_http_connect_port
   if (find.value === 'tcp') {
     getUsePort()
   }
@@ -330,7 +330,7 @@ const onChangeProxyType = (v) => {
 const getUsePort = () => {
   api.getUsePort().then(resp => {
     console.log('[getUsePort-resp]', resp)
-    formProxyConfigValue.value.remote_port = resp.data.port
+    formProxyConfigValue.value.remote_port = '' + resp.data.port
   }).catch(err => {
     console.log('[getUsePort-err]', err)
     formProxyConfigValue.value.remote_port = null

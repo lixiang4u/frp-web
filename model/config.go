@@ -28,7 +28,7 @@ func init() {
 	_ = viper.ReadInConfig()
 
 	ApiServerHost = util.EmptyOr(strings.TrimRight(viper.GetString("app.server"), "/"), "http://api-frp.lixiang4u.xyz:7200")
-	AppInstance1 = util.EmptyOr(strings.TrimSpace(viper.GetString("app.instance1")), "127.0.0.98:61234")
+	AppInstance1 = util.EmptyOr(strings.TrimSpace(viper.GetString("app.instance1")), "127.0.0.1:61234")
 
 	if len(ApiServerHost) == 0 {
 		log.Println("[configError] app.server 配置不能为空")
