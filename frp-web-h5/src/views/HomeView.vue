@@ -308,6 +308,7 @@ const createVhostColumns = () => {
                 type: "warning",
                 onClick: () => {
                   showModalCreateVhost.value = true
+                  row.remote_port = '' + row.remote_port
                   formProxyConfigValue.value = Object.assign({index: index}, row)
                 }
               },
