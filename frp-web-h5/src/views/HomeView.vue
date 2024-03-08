@@ -1,7 +1,7 @@
 <template>
   <div class="page">
 
-    <n-divider title-placement="left"><h2>1、配置服务器(frps)</h2></n-divider>
+    <n-divider title-placement="left"><h2>1、服务器配置(frps)</h2></n-divider>
     <n-form
         class="plr40"
         ref="formServerConfigRef"
@@ -14,7 +14,7 @@
         <n-form-item-gi :span="8" label="服务器地址" path="host">
           <n-input v-model:value="formServerConfigValue.host" placeholder="请输入服务器地址" :attr-size="45"/>
         </n-form-item-gi>
-        <n-form-item-gi :span="4" label="服务器端口" path="bind_port">
+        <n-form-item-gi :span="4" label="服务器端口(bind)" path="bind_port">
           <n-input v-model:value="formServerConfigValue.bind_port" type="number" placeholder="请输入服务器端口"
                    :attr-size="16"/>
         </n-form-item-gi>
@@ -41,7 +41,7 @@
 
     </n-form>
 
-    <n-divider title-placement="left"><h2>2、虚拟主机配置</h2></n-divider>
+    <n-divider title-placement="left"><h2>2、代理配置</h2></n-divider>
     <div class="plr40">
       <n-data-table :columns="vhostColumns" :data="vhosts" :bordered="false"/>
       <n-space class="btn-right">
