@@ -83,7 +83,8 @@ func ApiServerCreateVhost(ctx *gin.Context) {
 		Type       string `json:"type" form:"type"`
 		LocalAddr  string `json:"local_addr" form:"local_addr"`
 		RemotePort int    `json:"remote_port" form:"remote_port"`
-		Name       string `json:"name" form:"name"` // 代码名称
+		Name       string `json:"name" form:"name"`     // 代码名称
+		Status     bool   `json:"status" form:"status"` //true.运行，false.未运行
 	}
 	var req Req
 	_ = ctx.ShouldBind(&req)
@@ -95,6 +96,7 @@ func ApiServerCreateVhost(ctx *gin.Context) {
 		"local_addr":  req.LocalAddr,
 		"remote_port": req.RemotePort,
 		"name":        req.Name,
+		"status":      req.Status,
 	})
 	code, buf, _ := utils.HttpPost(fmt.Sprintf("%s/api/vhost", model.ApiServerHost), []byte(body))
 
@@ -229,6 +231,9 @@ func ApiNotRoute(ctx *gin.Context) {
 func handlerVhostConfig(vhosts []model.Vhost) []v1.ProxyConfigurer {
 	var proxyCfgs = make([]v1.ProxyConfigurer, 0)
 	for _, vhost := range vhosts {
+		if !vhost.Status {
+			continue
+		}
 		pc := v1.NewProxyConfigurerByType(v1.ProxyType(vhost.Type))
 		tmpTypedConfig := handlerVhostConfigTyped(pc, vhost)
 		if tmpTypedConfig != nil {
@@ -368,6 +373,10 @@ func runFrpClient(serverAddr string, serverPort int, vhosts []model.Vhost) (err 
 	var visitorCfgs = make([]v1.VisitorConfigurer, 0)
 
 	utils.FrpCloseRecover(svr)
+
+	if len(proxyCfgs) == 0 {
+		return errors.New("没有vhost可用")
+	}
 
 	svr, err = client.NewService(client.ServiceOptions{
 		Common:         cfg,

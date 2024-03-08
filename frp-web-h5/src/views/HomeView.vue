@@ -148,6 +148,14 @@
                        :attr-size="16"/>
             </n-form-item-gi>
 
+            <n-form-item-gi :span="12" label="状态" path="type">
+              <n-select
+                  v-model:value="formProxyConfigValue.status"
+                  :options="[{label:'运行',value:true},{label:'不运行',value:false}]"
+                  placeholder="请选择代理状态"
+                  filterable/>
+            </n-form-item-gi>
+
           </n-grid>
         </n-form>
       </div>
@@ -165,7 +173,7 @@
 
 <script>
 import {defineComponent, h, onBeforeMount, ref} from "vue";
-import {NButton, NSpace, useDialog, useMessage} from "naive-ui";
+import {NButton, NSpace, NTag, useDialog, useMessage} from "naive-ui";
 import api from "@/api/api.js";
 import ModalTipsComponent from "@/components/ModalTipsComponent.vue";
 import ModalWaitingComponent from "@/components/ModalWaitingComponent.vue";
@@ -245,6 +253,40 @@ const createVhostColumns = () => {
       },
     },
     {
+      title: "运行状态",
+      key: "status",
+      render(row) {
+        if (row.status) {
+          return h(
+              NTag,
+              {
+                'class': 'cursor',
+                bordered: false,
+                type: 'success',
+                onClick: () => {
+                  row.status = !row.status
+                  updateVhostAndReload(row)
+                }
+              },
+              {default: () => '运行',}
+          )
+        } else {
+          return h(
+              NTag,
+              {
+                'class': 'cursor',
+                bordered: false,
+                onClick: () => {
+                  row.status = !row.status
+                  updateVhostAndReload(row)
+                }
+              },
+              {default: () => '未运行',}
+          )
+        }
+      }
+    },
+    {
       title: "操作",
       key: "actions",
       maxWidth: 160,
@@ -287,6 +329,24 @@ const createVhostColumns = () => {
       }
     },
   ]
+}
+
+const updateVhostAndReload = (row) => {
+  api.newVhost(Object.assign({}, row)).then(resp => {
+    console.log('[newVhost-resp]', resp)
+    api.reloadVhost().then(resp => {
+      console.log('[reloadVhost-resp]', resp)
+      modalTipsRef.value.showSuccess({'message': '修改成功'})
+    }).catch(err => {
+      console.log('[err]', err)
+      modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
+    })
+  }).catch(err => {
+    console.log('[err]', err)
+    modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
+  }).finally(() => {
+    showModalCreateVhost.value = false
+  })
 }
 
 const vhostColumns = createVhostColumns()
@@ -352,6 +412,7 @@ const onClickVhostSave = () => {
       name: formProxyConfigValue.value.name,
       local_addr: formProxyConfigValue.value.local_addr,
       remote_port: +formProxyConfigValue.value.remote_port,
+      status: +formProxyConfigValue.value.status,
     }).then(resp => {
       console.log('[newVhost-resp]', resp)
 
@@ -363,13 +424,6 @@ const onClickVhostSave = () => {
     }).finally(() => {
       showModalCreateVhost.value = false
     })
-    // if (errors) {
-    //   message.error("配置错误")
-    // } else {
-    //   addVhostToList(formProxyConfigValue.value)
-    //   clearFormProxyConfigValue()
-    //   showModalCreateVhost.value = false
-    // }
   })
 
 }
@@ -464,6 +518,7 @@ const defaultProxyConfig = {
   remote_port: null,
   crt_path: null,
   key_path: null,
+  status: true,
 }
 
 const formProxyConfigRef = ref(null)
@@ -602,6 +657,11 @@ export default defineComponent({
 :deep(.n-form-item-label__text),
 .page {
   font-family: "Source Code Pro", Arial, sans-serif;
+}
+
+.cursor,
+:deep(.cursor) {
+  cursor: pointer;
 }
 
 .plr40 {
