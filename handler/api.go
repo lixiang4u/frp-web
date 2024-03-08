@@ -255,6 +255,9 @@ func handlerVhostConfigTyped(pc v1.ProxyConfigurer, vhost model.Vhost) (proxyCfg
 
 		tmpC.CustomDomains = make([]string, 0)
 		tmpC.CustomDomains = append(tmpC.CustomDomains, vhost.CustomDomain)
+		if strings.Contains(vhost.CnameDomain, ".") {
+			tmpC.CustomDomains = append(tmpC.CustomDomains, vhost.CnameDomain)
+		}
 
 		proxyCfg = tmpC
 	case *v1.HTTPSProxyConfig:
