@@ -406,7 +406,8 @@ func NewClientVhost(localPort int) error {
 		"type":       string(v1.ProxyTypeHTTP),
 		"machine_id": model.AppMachineId,
 		"local_addr": fmt.Sprintf("127.0.0.1:%d", localPort),
-		"name":       fmt.Sprintf("frp-%s-%d", model.AppMachineId[:6], localPort),
+		"name":       fmt.Sprintf("http-%d(default)", localPort),
+		"status":     true,
 	})
 	code, buf, err := utils.HttpPost(fmt.Sprintf("%s/api/vhost", model.ApiServerHost), []byte(body))
 	if err != nil {

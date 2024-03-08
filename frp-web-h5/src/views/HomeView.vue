@@ -553,7 +553,7 @@ const onBeforeMountHandler = () => {
     // getVhostList()
     api.getVhosts().then(resp => {
       console.log('[getVhostList-resp]', resp)
-      vhosts.value = resp.data.vhosts
+      vhosts.value = sortVhost(resp.data.vhosts)
 
       api.reloadVhost().then(resp => {
         console.log('[reloadVhost-resp]', resp)
@@ -576,11 +576,24 @@ const onBeforeMountHandler = () => {
 const getVhostList = () => {
   api.getVhosts().then(resp => {
     console.log('[getVhostList-resp]', resp)
-    vhosts.value = resp.data.vhosts
+    vhosts.value = sortVhost(resp.data.vhosts)
   }).catch(err => {
     console.log('[err]', err)
     modalTipsRef.value.showError({'message': err.msg ?? ('系统错误：' + err)})
   })
+}
+
+const sortVhost = (data) => {
+  data.sort((a, b) => {
+    if (a.created_at === b.created_at) {
+      return a.id.localeCompare(b.id)
+    }
+    return b.created_at - a.created_at
+  })
+  // console.log('[cc]', data.map(i => {
+  //   return i.id
+  // }).join(', '))
+  return data
 }
 
 const newVhost = () => {
