@@ -60,6 +60,10 @@
 
     <div class="plr40 grey lh180">
       <span>
+        <router-link class="grey" to="/doc">文档</router-link>
+      </span>
+      &vert;
+      <span>
         更新地址：<a class="grey" href="https://github.com/lixiang4u/frp-web/releases/">frp-web</a>
       </span>
       &vert;
@@ -233,11 +237,20 @@ const createVhostColumns = () => {
             h('div', {class: 'lh150'}, h('a', {}, tmpUrl)),
           ]
         } else {
-          const tmpUrl = `${row.type}://${row.custom_domain}`
-          return [
-            h('div', {class: 'lh150'}, h('a', {href: tmpUrl, target: '_blank'}, tmpUrl)),
-            // h('div', {class: 'lh150'}, h('a', {href: `${tmpUrl}/files/`, target: '_blank'}, `${tmpUrl}/files/`)),
-          ]
+          let els = []
+          if (row.custom_domain) {
+            let tmpUrl = `${row.type}://${row.custom_domain}`
+            els.push(
+                h('div', {class: 'lh150'}, h('a', {href: tmpUrl, target: '_blank'}, tmpUrl))
+            )
+          }
+          if (row.cname_domain && row.cname_domain.includes('.')) {
+            let tmpUrl = `${row.type}://${row.cname_domain}`
+            els.push(
+                h('div', {class: 'lh150'}, h('a', {href: tmpUrl, target: '_blank'}, tmpUrl))
+            )
+          }
+          return els
         }
       },
     },
@@ -522,6 +535,7 @@ const defaultProxyConfig = {
   type: null,
   name: null,
   custom_domain: null,
+  cname_domain: null,
   custom_domains: [],
   local_port: null,
   local_addr: null,
