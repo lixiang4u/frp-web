@@ -245,9 +245,10 @@ func handlerVhostConfig(vhosts []model.Vhost) []v1.ProxyConfigurer {
 
 func handlerVhostConfigTyped(pc v1.ProxyConfigurer, vhost model.Vhost) (proxyCfg v1.ProxyConfigurer) {
 	host, port, _ := net.SplitHostPort(vhost.LocalAddr)
+	tmpVhostName := fmt.Sprintf("%s-%s-%s(%s)", vhost.Type, port, vhost.Id, vhost.Name)
 	switch tmpC := pc.(type) {
 	case *v1.HTTPProxyConfig:
-		tmpC.Name = vhost.Name
+		tmpC.Name = tmpVhostName
 		tmpC.Transport.BandwidthLimitMode = "client"
 
 		tmpC.LocalIP = host
@@ -264,7 +265,7 @@ func handlerVhostConfigTyped(pc v1.ProxyConfigurer, vhost model.Vhost) (proxyCfg
 		certFile, keyFile, _ := parseCertToFile(vhost.Id, []byte(vhost.CrtPath), []byte(vhost.KeyPath))
 
 		// 参考frp实际运行的配置数据结构填充
-		tmpC.Name = vhost.Name
+		tmpC.Name = tmpVhostName
 		tmpC.Transport.BandwidthLimitMode = "client"
 
 		tmpC.LocalIP = host
@@ -289,7 +290,7 @@ func handlerVhostConfigTyped(pc v1.ProxyConfigurer, vhost model.Vhost) (proxyCfg
 
 		proxyCfg = tmpC
 	case *v1.TCPProxyConfig:
-		tmpC.Name = vhost.Name
+		tmpC.Name = tmpVhostName
 		tmpC.Transport.BandwidthLimitMode = "client"
 
 		tmpC.LocalIP = host
@@ -299,7 +300,7 @@ func handlerVhostConfigTyped(pc v1.ProxyConfigurer, vhost model.Vhost) (proxyCfg
 
 		proxyCfg = tmpC
 	case *v1.TCPMuxProxyConfig:
-		tmpC.Name = vhost.Name
+		tmpC.Name = tmpVhostName
 		tmpC.Transport.BandwidthLimitMode = "client"
 
 		tmpC.LocalIP = host

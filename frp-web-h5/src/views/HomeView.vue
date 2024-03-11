@@ -152,10 +152,10 @@
                        :attr-size="16"/>
             </n-form-item-gi>
 
-            <n-form-item-gi :span="12" label="状态" path="type">
+            <n-form-item-gi :span="12" label="状态" path="status">
               <n-select
                   v-model:value="formProxyConfigValue.status"
-                  :options="[{label:'运行',value:true},{label:'不运行',value:false}]"
+                  :options="[{label:'运行',value:1},{label:'不运行',value:0}]"
                   placeholder="请选择代理状态"
                   filterable/>
             </n-form-item-gi>
@@ -181,6 +181,7 @@ import {NButton, NSpace, NTag, useDialog, useMessage} from "naive-ui";
 import api from "@/api/api.js";
 import ModalTipsComponent from "@/components/ModalTipsComponent.vue";
 import ModalWaitingComponent from "@/components/ModalWaitingComponent.vue";
+import strings from "@/utils/strings.js";
 
 
 let message = null// message弹出框
@@ -314,6 +315,7 @@ const createVhostColumns = () => {
       maxWidth: 160,
       width: 160,
       render(row, index) {
+        row.status = 0 + row.status
         return [
           h(
               NButton,
@@ -403,6 +405,9 @@ const onChangeProxyType = (v) => {
   const find = proxyTypeOptions.value.find(item => {
     return item.value === v
   })
+  if (!formProxyConfigValue.value.name) {
+    formProxyConfigValue.value.name = `${find.value}-${strings.randomString(4)}`
+  }
   formProxyConfigValue.value.local_addr = find.default_local_addr
   formProxyConfigValue.value.remote_port = '' + formServerConfigValue.value.tcp_mux_http_connect_port
   if (find.value === 'tcp') {
@@ -435,7 +440,7 @@ const onClickVhostSave = () => {
       name: formProxyConfigValue.value.name,
       local_addr: formProxyConfigValue.value.local_addr,
       remote_port: +formProxyConfigValue.value.remote_port,
-      status: +formProxyConfigValue.value.status,
+      status: !!formProxyConfigValue.value.status,
     }).then(resp => {
       console.log('[newVhost-resp]', resp)
 
@@ -449,16 +454,6 @@ const onClickVhostSave = () => {
     })
   })
 
-}
-
-const addVhostToList = (data) => {
-  console.log('[dataX]', data)
-  if (data.index || data.index === 0) {
-    vhosts.value[data.index] = data
-    delete data.index
-  } else {
-    vhosts.value.push(data)
-  }
 }
 
 const removeVhostFromList = (data, index) => {
@@ -512,20 +507,24 @@ const formServerConfigRules = {
   host: {
     required: true,
     message: "请输入服务器地址",
+    trigger: ['blur', 'change'],
   },
   bind_port: {
     required: true,
     message: "请输入服务器端口",
     type: 'number',
+    trigger: ['blur', 'change'],
   },
   vhost_http_port: {
     required: true,
     message: "请输入vhost端口(http)",
     type: 'number',
+    trigger: ['blur', 'change'],
   },
   vhost_https_port: {
     required: true,
     message: "请输入vhost端口(https)",
+    trigger: ['blur', 'change'],
     type: 'number',
   },
 }
@@ -533,16 +532,16 @@ const formServerConfigRules = {
 const defaultProxyConfig = {
   id: null,
   type: null,
-  name: null,
-  custom_domain: null,
-  cname_domain: null,
+  name: '',
+  custom_domain: '',
+  cname_domain: '',
   custom_domains: [],
   local_port: null,
   local_addr: null,
   remote_port: null,
   crt_path: null,
   key_path: null,
-  status: true,
+  status: 1,
 }
 
 const formProxyConfigRef = ref(null)
